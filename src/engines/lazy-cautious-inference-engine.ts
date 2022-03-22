@@ -15,6 +15,7 @@ import { evaluate } from './evaluation'
 import { getNetworkInfo, initializeCliques, initializeEvidence, initializeNodeParents, initializeNodes, initializePosteriorCliquePotentials, initializePosteriorNodePotentials, initializePriorNodePotentials, initializeSeparatorPotentials, NetworkInfo, upsertFormula, setDistribution } from './util'
 import { Distribution } from './Distribution'
 import { arbitraryJoin, inferArbitraryJointProbability } from './arbitrary-join'
+import { getRandomSample } from './random-sample'
 
 /** This inference engine uses a modified version of the lazy cautious message
  * propigation strategy described in:
@@ -353,6 +354,22 @@ export class LazyPropagationEngine implements IInferenceEngine {
       })
     })
     return result
+  }
+
+  /** Get a random sample from the Bayes Network subject to any
+   * of the currently provided evidence.
+   * @param size: The sample size to return.
+   * Note: This function will throw an error if the sample size
+   *  is less than zero, or if the Bayes network posterior
+   *  distributions cannot be computed, or if the network is
+   *  otherwise ill formed.
+   */
+  getRandomSample (size: number): Record<string, string>[] {
+    // Some sanity checks
+    if (size < 0) throw new Error('Cannot generate random sample.   Sample size must be greater than zero.')
+    if (size === 0) return []
+    // ensure that all the clique potentials have been computed.
+    return getRandomSample(this, size)
   }
 
   // This is a back door for obtaining all the private collections in the inference engine.
