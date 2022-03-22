@@ -500,3 +500,15 @@ export function restoreEngine (engine: InferenceEngine, localPotentials: (FastPo
   Object.assign(engine, { _potentials: potentials })
   engine.setEvidence(evidence)
 }
+
+/** Given a potential function, normalize the potentials so that they
+ * total to unity.
+ * @param potentials: the potential function to normalize.
+ * Note: This function may fail to produce a valid potential function
+ * if the input contains NaN or infinite values, or if the sum of the
+ * potentials is zero.   The caller must guard against these conditions.
+ */
+export function normalize (potentials: FastPotential) {
+  const total = sum(potentials)
+  return potentials.map(p => p / total)
+}
