@@ -37,6 +37,13 @@ describe('getRandomSample', () => {
     const str = 'ALARM'
     expect(result.every(x => x[str] === 'T')).toEqual(true)
   })
+  it('is consistent when evidence is provided for all variables', () => {
+    const engine = new InferenceEngine(network)
+    engine.setEvidence({ ALARM: ['F'], EARTHQUAKE: ['F'], BURGLARY: ['F'], JOHN_CALLS: ['F'], MARY_CALLS: ['F'] })
+    const n = 100
+    const result = engine.getRandomSample(n)
+    expect(result.every(xs => Object.values(xs).every(x => x === 'F'))).toEqual(true)
+  })
   it('approximates the joint distribution', () => {
     const engine = new InferenceEngine(network)
     const n = 10000
