@@ -72,10 +72,14 @@ function getCliqueInfo (clique: FastClique, nodes: FastNode[], potentials: (Fast
   // construct the conditional distribution for the clique from the posterior
   // joint probability distribution.
   const posterior = potentials[clique.posterior] as FastPotential
+  const posteriorDomain = formulas[clique.posterior].domain
+  const posteriorNumLvls = posteriorDomain.map(x => nodes[x].levels.length)
   const blockSize = product(numbersOfLevels.slice(0, numberOfHeadVariables))
   // compute the potential of the parents by marginalizing the posterior joint
   // probability distribution.
-  const parentPotential = evaluateMarginalPure(posterior, domain, numbersOfLevels, parents, numbersOfLevels.slice(numberOfHeadVariables), blockSize, true)
+  const parentNumOfLvls = numbersOfLevels.slice(numberOfHeadVariables)
+  const parentSize = product(parentNumOfLvls)
+  const parentPotential = evaluateMarginalPure(posterior, posteriorDomain, posteriorNumLvls, parents, parentNumOfLvls, parentSize, false)
 
   let conditional: FastPotential = []
   for (let offset = 0; offset * blockSize < posterior.length; offset++) {

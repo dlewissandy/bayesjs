@@ -1,5 +1,6 @@
 
 import { network } from '../../models/alarm'
+import { network as net4 } from '../../models/fourNode'
 import { InferenceEngine, FastPotential } from '../../src'
 import { groupDataByObservedValues } from '../../src/learning/Observation'
 import { indexToCombination } from '../../src/engines'
@@ -36,6 +37,15 @@ describe('getRandomSample', () => {
     const result = engine.getRandomSample(n)
     const str = 'ALARM'
     expect(result.every(x => x[str] === 'T')).toEqual(true)
+  })
+  it('is consistent when evidence is provided for all variables', () => {
+    const engine = new InferenceEngine(net4)
+    const evidence = { B: ['T'], F: ['0'], I: ['0'], S: ['B'] }
+    const expected = { B: 'T', F: '0', I: '0', S: 'B' }
+    engine.setEvidence(evidence)
+    const n = 100
+    const result = engine.getRandomSample(n)
+    result.forEach(observed => expect(observed).toEqual(expected))
   })
   it('approximates the joint distribution', () => {
     const engine = new InferenceEngine(network)
