@@ -25,17 +25,19 @@ function minimumSpanningTree (cliqueDomains: number[][], cliqueNeighbors: number
     domain: [...c],
     neighbors: [...cliqueNeighbors[i]],
   }))
-  const nodeQueue = leavesOfSpanningTree.filter(c => c && c.neighbors.length === 1)
+  const nodeQueue = leavesOfSpanningTree.filter(c => c && c.neighbors.length <= 1)
   while (nodeQueue.length > 0) {
     const node: TreeNode = nodeQueue.pop() as TreeNode
     const neighbor = leavesOfSpanningTree[node.neighbors[0]] as TreeNode
     const diff = node.domain.filter(x => variables.includes(x))
+    if (neighbor) {
     // If the neighbor has all of the variables of interest that are in the current
     // node, then we can prune the current node.
-    if (diff.length === 0 || (neighbor && diff.every(x => neighbor.domain.includes(x)))) {
-      leavesOfSpanningTree[node.id] = null
-      neighbor.neighbors = neighbor.neighbors.filter(x => x !== node.id)
-      if (neighbor.neighbors.length === 1) nodeQueue.push(neighbor)
+      if (diff.length === 0 || (neighbor && diff.every(x => neighbor.domain.includes(x)))) {
+        leavesOfSpanningTree[node.id] = null
+        neighbor.neighbors = neighbor.neighbors.filter(x => x !== node.id)
+        if (neighbor.neighbors.length === 1) nodeQueue.push(neighbor)
+      }
     }
   }
   const cs: number[] = leavesOfSpanningTree.filter(x => x != null).map(x => x?.id) as number[]
