@@ -175,9 +175,9 @@ export class Distribution {
     const idx = this._variableNames.indexOf(name)
     const oldNumberOfLevels: number[] = this._variableLevels.map(x => x.length)
 
-    if (idx > 0) {
+    if (idx >= 0) {
       const lidx = this._variableLevels[idx].indexOf(level)
-      if (lidx > 0) {
+      if (lidx >= 0) {
         const newNumberOfLevels = oldNumberOfLevels.map((l, i) => i === idx ? l - 1 : l)
         const result: number[] = Array(product(newNumberOfLevels)).fill(0)
 
