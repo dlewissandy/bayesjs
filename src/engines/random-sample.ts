@@ -1,4 +1,8 @@
-import { FastPotential, combinationToIndex, indexToCombination } from './FastPotential'
+import {
+  FastPotential,
+  combinationToIndex,
+  indexToCombination,
+} from './FastPotential'
 import { InferenceEngine } from '..'
 import { product, partition } from 'ramda'
 import { evaluateMarginalPure } from './evaluation'
@@ -39,7 +43,7 @@ type CliqueInfo = {
   blockSize: number;
   /** The conditional probability distribution for the clique */
   conditional: FastPotential;
-}
+};
 
 /** Given a clique, collect the information necessary to generate
  * random observations from the clique.   Specifically, we need to
@@ -57,45 +61,101 @@ type CliqueInfo = {
  * @param visitedNodes: A collection of node identifiers for those
  *   nodes which belong to one or more of the cliques that have
  *   already been visited.
-  */
-function getCliqueInfo (clique: FastClique, nodes: FastNode[], potentials: (FastPotential|null)[], formulas: Formula[], visitedNodes: number[]): CliqueInfo {
+ */
+function getCliqueInfo (
+  clique: FastClique,
+  nodes: FastNode[],
+  potentials: (FastPotential | null)[],
+  formulas: Formula[],
+  visitedNodes: number[],
+): CliqueInfo {
   const { domain: formulaDomain } = formulas[clique.posterior]
-  const [headVariables, parentVariables] = partition(x => !visitedNodes.includes(x), formulaDomain)
-  if (headVariables.length === 0) throw new Error('Cannot generate random sample.  Clique has no head variables.')
-  const domain = headVariables.concat(parentVariables)
-  const numbersOfLevels = domain.map(i => nodes[i].levels.length)
-  if (numbersOfLevels.some(x => x === 0)) throw new Error('Cannot generate random sample.  Some of the variables have no levels.')
+  const [headVariables, parentVariables] = partition(
+    x => !visitedNodes.includes(x),
+    formulaDomain,
+  )
+  if (headVariables.length === 0) {
+    throw new Error(
+      'Cannot generate random sample.  Clique has no head variables.',
+    )
+  }
+  const conditionalDomain = headVariables.concat(parentVariables)
+  const numbersOfLevels = conditionalDomain.map(i => nodes[i].levels.length)
+  if (numbersOfLevels.some(x => x === 0)) {
+    throw new Error(
+      'Cannot generate random sample.  Some of the variables have no levels.',
+    )
+  }
 
   const numberOfHeadVariables = headVariables.length
-  const parents: number[] = domain.filter(x => !headVariables.includes(x))
 
   // construct the conditional distribution for the clique from the posterior
   // joint probability distribution.
   const posterior = potentials[clique.posterior] as FastPotential
   const posteriorDomain = formulas[clique.posterior].domain
   const posteriorNumLvls = posteriorDomain.map(x => nodes[x].levels.length)
-  const blockSize = product(numbersOfLevels.slice(0, numberOfHeadVariables))
+  const blockSize = product(headVariables.map(x => nodes[x].levels.length))
   // compute the potential of the parents by marginalizing the posterior joint
   // probability distribution.
-  const parentNumOfLvls = numbersOfLevels.slice(numberOfHeadVariables)
+  const parentNumOfLvls = parentVariables.map(x => nodes[x].levels.length)
   const parentSize = product(parentNumOfLvls)
-  const parentPotential = evaluateMarginalPure(posterior, posteriorDomain, posteriorNumLvls, parents, parentNumOfLvls, parentSize, false)
+  const parentPotential = evaluateMarginalPure(
+    posterior,
+    posteriorDomain,
+    posteriorNumLvls,
+    parentVariables,
+    parentNumOfLvls,
+    parentSize,
+    false,
+  )
 
   let conditional: FastPotential = []
+  // The order of the variables in the posterior may not be in the
+  // head/parent variable order of the conditional.   if required,
+  // we permute the elements of the posterior to put them into the
+  // correct order.
+  const permuted = posteriorDomain.some((x, i) => x !== conditionalDomain[i])
+    ? posterior.map((_, i) => {
+      const permutedCombo = indexToCombination(i, numbersOfLevels)
+      const posteriorCombo = conditionalDomain.map(
+        j => permutedCombo[posteriorDomain.indexOf(j)],
+      )
+      const posteriorIndex = combinationToIndex(
+        posteriorCombo,
+        posteriorNumLvls,
+      )
+      return posterior[posteriorIndex]
+    })
+    : posterior
   for (let offset = 0; offset * blockSize < posterior.length; offset++) {
     // We proceed block by block of the conditional distribution, ensuring that
     // each block is normalized and satisifies P(X|Y) = P(X,Y) / P(Y).
-    const block = posterior.slice(offset * blockSize, (offset + 1) * blockSize)
-    conditional = conditional.concat(normalize(block.map((p) => p / parentPotential[offset])))
+    const block = permuted.slice(offset * blockSize, (offset + 1) * blockSize)
+    conditional = conditional.concat(
+      normalize(
+        block.map(
+          p =>
+            // This ugliness is to avoid division by zero when the probability
+            // of the parent event is zero (which can occur when the user
+            // provides inconsistent evidence).   This will populate the block
+            // with a uniform distribution so that it can produce any
+            // possible outcome of head variables.   However, it may change the
+            // probability of extremely rare events.
+            Math.round(
+              ((p + 1e-64) / (parentPotential[offset] + 1e-64)) * 1e16,
+            ) / 1e16,
+        ),
+      ),
+    )
   }
 
   return {
     id: clique.id,
-    domain,
-    nodeNames: domain.map(i => nodes[i].name),
+    domain: conditionalDomain,
+    nodeNames: conditionalDomain.map(i => nodes[i].name),
     numberOfHeadVariables,
     numbersOfLevels,
-    levels: domain.map(i => nodes[i].levels),
+    levels: conditionalDomain.map(i => nodes[i].levels),
     blockSize,
     conditional,
   }
@@ -112,7 +172,13 @@ function getCliqueInfo (clique: FastClique, nodes: FastNode[], potentials: (Fast
 function getTraversalOrder (engine: InferenceEngine): CliqueInfo[] {
   // deconstruct the inference engine to facilitate working with
   // the hidden parameters.
-  const { _cliques, _potentials, _nodes, _connectedComponents, _formulas } = engine.toJSON()
+  const {
+    _cliques,
+    _potentials,
+    _nodes,
+    _connectedComponents,
+    _formulas,
+  } = engine.toJSON()
   // Perform a topological sorting on each of the connected components
   // of the clique graph (junction tree graph), choosing an arbitrary
   // clique from the connected connected components and peforming a
@@ -129,12 +195,22 @@ function getTraversalOrder (engine: InferenceEngine): CliqueInfo[] {
     while (queue.length > 0) {
       const cliqueId = queue.shift() as number
       const clique: FastClique = _cliques[cliqueId]
-      const info = getCliqueInfo(clique, _nodes, _potentials, _formulas, visitedNodes)
+      const info = getCliqueInfo(
+        clique,
+        _nodes,
+        _potentials,
+        _formulas,
+        visitedNodes,
+      )
       visitedCliques.push(cliqueId)
-      visitedNodes = visitedNodes.concat(info.domain.slice(0, info.numberOfHeadVariables))
+      visitedNodes = visitedNodes.concat(
+        info.domain.slice(0, info.numberOfHeadVariables),
+      )
       result.push(info)
 
-      queue = queue.concat(clique.neighbors.filter(x => !visitedCliques.includes(x)))
+      queue = queue.concat(
+        clique.neighbors.filter(x => !visitedCliques.includes(x)),
+      )
     }
   })
   return result
@@ -154,22 +230,45 @@ function getRandomIndex (block: FastPotential): number {
   return block.length - 1
 }
 
-function getRandomObservation (cliqueInfo: CliqueInfo[]): Record<string, string> {
+function getRandomObservation (
+  cliqueInfo: CliqueInfo[],
+): Record<string, string> {
   const fastObservation: Record<number, number> = {}
   const result: Record<string, string> = {}
-  cliqueInfo.forEach(({ domain, numberOfHeadVariables, numbersOfLevels, levels, blockSize, conditional, nodeNames }) => {
-    const parentCombo = domain.slice(numberOfHeadVariables).map(i => fastObservation[i])
-    const offset = combinationToIndex(parentCombo, numbersOfLevels.slice(numberOfHeadVariables))
-    const block = conditional.slice(offset * blockSize, (offset + 1) * blockSize)
-    const headIdx = getRandomIndex(block)
-    const headCombo = indexToCombination(headIdx, numbersOfLevels.slice(0, numberOfHeadVariables))
-    headCombo.forEach((lvlIdx, headIdx) => {
-      const nodeIdx = domain[headIdx]
-      const nodeName = nodeNames[headIdx]
-      fastObservation[nodeIdx] = lvlIdx
-      result[nodeName] = levels[headIdx][lvlIdx]
-    })
-  })
+  cliqueInfo.forEach(
+    ({
+      domain,
+      numberOfHeadVariables,
+      numbersOfLevels,
+      levels,
+      blockSize,
+      conditional,
+      nodeNames,
+    }) => {
+      const parentCombo = domain
+        .slice(numberOfHeadVariables)
+        .map(i => fastObservation[i])
+      const offset = combinationToIndex(
+        parentCombo,
+        numbersOfLevels.slice(numberOfHeadVariables),
+      )
+      const block = conditional.slice(
+        offset * blockSize,
+        (offset + 1) * blockSize,
+      )
+      const headIdx = getRandomIndex(block)
+      const headCombo = indexToCombination(
+        headIdx,
+        numbersOfLevels.slice(0, numberOfHeadVariables),
+      )
+      headCombo.forEach((lvlIdx, headIdx) => {
+        const nodeIdx = domain[headIdx]
+        const nodeName = nodeNames[headIdx]
+        fastObservation[nodeIdx] = lvlIdx
+        result[nodeName] = levels[headIdx][lvlIdx]
+      })
+    },
+  )
 
   return result
 }
@@ -188,12 +287,21 @@ function getRandomObservation (cliqueInfo: CliqueInfo[]): Record<string, string>
  *   clique distributions cannot be computed, the sample size is
  *   less than zero, or if any of nodes have no levels.
  */
-export function getRandomSample (engine: InferenceEngine, sampleSize: number): Record<string, string>[] {
+export function getRandomSample (
+  engine: InferenceEngine,
+  sampleSize: number,
+): Record<string, string>[] {
   // Basic sanity checks
-  if (sampleSize < 0) throw new Error('Cannot generate random sample.   Sample size must be greater than zero.')
+  if (sampleSize < 0) {
+    throw new Error(
+      'Cannot generate random sample.   Sample size must be greater than zero.',
+    )
+  }
   if (sampleSize === 0) return []
   // Force the computation of all the posterior joint distributions for the cliques
   engine.inferAll()
   const cliqueInfo: CliqueInfo[] = getTraversalOrder(engine)
-  return Array(sampleSize).fill(null).map(() => getRandomObservation(cliqueInfo))
+  return Array(sampleSize)
+    .fill(null)
+    .map(() => getRandomObservation(cliqueInfo))
 }
