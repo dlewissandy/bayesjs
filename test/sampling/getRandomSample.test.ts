@@ -82,6 +82,6 @@ describe('getRandomSample', () => {
     })
     const expected = dist.getPotentials().map(p => Number.isNaN(p) ? 0 : p)
     const residuals = observed.map((x, i) => Math.abs(x - expected[i]))
-    expect(residuals.every(p => p < 0.01)).toEqual(true)
+    expect(residuals.every(p => p < 0.02)).toEqual(true)
   })
 })
