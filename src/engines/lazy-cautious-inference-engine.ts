@@ -321,10 +321,20 @@ export class LazyPropagationEngine implements IInferenceEngine {
   // state upon completion.
     const initialPotentials = [...this._potentials]
     const initialEvidence = this.getAllEvidence()
-    let unvisited = [...event]
-    let possibleCliques = this._cliques.filter(clique => unvisited.some(({ nodeId }) => clique.domain.includes(nodeId)))
+    // remove any nodes that have hard evidence.   Since we have ensured that the event is not
+    // inconsistent with the evidence, then their probability will be unity.
+    let unvisited = event.filter(({ nodeId }) => {
+      const efunc = this._formulas[this._nodes[nodeId].evidenceFunction] as EvidenceFunction
+      return !efunc.levels || efunc.levels.length > 1
+    })
 
     let result = 1
+
+    let possibleCliques = this._cliques.filter(clique => unvisited.some(({ nodeId }) => clique.domain.includes(nodeId)))
+
+    // if there are any variables that participate in the event, and for which all of the
+    // parents have either hard evidence
+
     while (unvisited.length > 0) {
       // Pick a clique that has the largest number of unvisited variables.
       const clique = pickRootClique(possibleCliques, unvisited.map(x => x.nodeId), this._formulas)
