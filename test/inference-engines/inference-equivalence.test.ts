@@ -1,7 +1,6 @@
 import { network } from '../../models/fourNode'
 import { InferenceEngine } from '../../src'
-
-const roundResult = (x: number) => Math.round(x * 1E8) / 1E8
+import { roundResult } from './helpers'
 
 describe('engine infer and distribution infer', () => {
   const runTest = (event: Record<string, string[]>, evidence?: Record<string, string[]>) => {

@@ -18,16 +18,30 @@ describe('infer', () => {
     const observed = net.infer({})
     expect(observed).toEqual(1)
   })
-  it('restores the inference engine to its initial state', () => {
-    let net = init()
-    net.inferAll()
-    net.setEvidence({ F: ['-0.5'], I: ['0'] })
-    const expected = net.toJSON()
-    net = init()
-    net.inferAll()
-    net.setEvidence({ F: ['-0.5'], I: ['0'] })
-    net.infer({ B: ['T'], S: ['A'] })
-    const observed = net.toJSON()
+  it('restores the original evidence', () => {
+    const net = init()
+    const expected = { F: ['-0.5'], I: ['0'] }
+    const event = { B: ['-0.5'], S: ['0'] }
+    net.setEvidence(expected)
+    net.infer(event)
+    const observed = net.getAllEvidence()
     expect(observed).toEqual(expected)
+  })
+  it('does not clear prior potentials', () => {
+    const net = init()
+    const event = { B: ['-0.5'], S: ['0'] }
+    const initialPotentials = net.toJSON()._potentials
+    net.infer(event)
+    const finalPotentials = net.toJSON()._potentials
+    expect(initialPotentials.filter(x => x != null)).toEqual(finalPotentials.filter((_, i) => initialPotentials[i] != null))
+  })
+  it('inferring twice does not evaluate new potentials', () => {
+    const net = init()
+    const event = { B: ['-0.5'], S: ['0'] }
+    net.infer(event)
+    const initialPotentials = net.toJSON()._potentials
+    net.infer(event)
+    const finalPotentials = net.toJSON()._potentials
+    expect(finalPotentials).toEqual(initialPotentials)
   })
 })

@@ -1,6 +1,6 @@
 import { NodeId, FormulaId } from './common'
 import { FastNode } from './FastNode'
-import { reduce, product } from 'ramda'
+import { reduce, product, uniqBy } from 'ramda'
 
 export enum FormulaType {
   MARGINAL,
@@ -154,7 +154,7 @@ export class Product {
 // collection is empty or contains only units, and when the
 // product constists of a single non unital term.
 export const mult = (formulas: Formula[]): Formula => {
-  const fs = formulas.filter(x => x.kind !== FormulaType.UNIT)
+  const fs = uniqBy(x => x.name, formulas.filter(x => x.kind !== FormulaType.UNIT))
   if (fs.length === 0) return new Unit()
   if (fs.length === 1) return formulas[0]
   return new Product(fs)

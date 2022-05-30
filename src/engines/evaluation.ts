@@ -235,19 +235,15 @@ const evaluateMarginal = (marginalFormula: Marginal, nodes: FastNode[], formulas
 const evaluateEvidence = (evidenceFunction: EvidenceFunction, potentials: MaybeFastPotential[]): FastPotential => {
   // if no evidence is provided, then we can return the inner potential
   const result: number[] = Array(evidenceFunction.size).fill(1)
-  let total = 0
   if (evidenceFunction.levels == null) {
     potentials[evidenceFunction.id] = result.fill(1)
-    total = result.length
   } else {
     result.forEach((_, i) => {
       result[i] = evidenceFunction.levels?.includes(i) ? 1 : 0
-      total += result[i]
     })
   }
-  const normalizedResult = result.map(x => x / total)
-  potentials[evidenceFunction.id] = normalizedResult
-  return normalizedResult
+  potentials[evidenceFunction.id] = result
+  return result
 }
 
 /**

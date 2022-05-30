@@ -1,629 +1,562 @@
-import * as expect from 'expect'
-
-import { IInferenceEngine } from '../../src/types'
-
 import { network } from '../../models/huge-network'
-import { InferenceEngine } from '../../src/index'
+import { runTest, TestCase } from './helpers'
 
-const infersGiveNoEvidence = (engine: IInferenceEngine) => {
-  const { infer } = engine
-
-  expect(infer({ node1: ['T'] }).toFixed(4)).toBe('0.9802')
-  expect(infer({ node1: ['F'] }).toFixed(4)).toBe('0.0198')
-  expect(infer({ node2: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node2: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node3: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node3: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node4: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node4: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node5: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node5: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node6: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node6: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node7: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node7: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node8: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node8: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node9: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node9: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node10: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node10: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node11: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node11: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node12: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node12: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node13: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node13: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node14: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node14: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node15: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node15: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node16: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node16: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node17: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node17: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node18: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node18: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node19: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node19: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node20: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node20: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node21: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node21: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node22: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node22: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node23: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node23: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node24: ['T'] }).toFixed(4)).toBe('0.0198')
-  expect(infer({ node24: ['F'] }).toFixed(4)).toBe('0.9802')
-  expect(infer({ node25: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node25: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node26: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node26: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node27: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node27: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node28: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node28: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node29: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node29: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node30: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node30: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node31: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node31: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node32: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node32: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node33: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node33: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node34: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node34: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node35: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node35: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node36: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node36: ['F'] }).toFixed(4)).toBe('1.0000')
-  expect(infer({ node37: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node37: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node38: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node38: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node39: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node39: ['F'] }).toFixed(4)).toBe('0.0100')
+const testCases: TestCase[] = [
+  { event: { node1: ['T'] }, evidence: {}, expected: 0.9802 },
+  { event: { node1: ['F'] }, evidence: {}, expected: 0.0198 },
+  { event: { node2: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node2: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node3: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node3: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node4: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node4: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node5: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node5: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node6: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node6: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node7: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node7: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node8: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node8: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node9: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node9: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node10: ['T'] }, evidence: {}, expected: 0.9899 },
+  { event: { node10: ['F'] }, evidence: {}, expected: 0.0101 },
+  { event: { node11: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node11: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node12: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node12: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node13: ['T'] }, evidence: {}, expected: 0.9899 },
+  { event: { node13: ['F'] }, evidence: {}, expected: 0.0101 },
+  { event: { node14: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node14: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node15: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node15: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node16: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node16: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node17: ['T'] }, evidence: {}, expected: 0.9899 },
+  { event: { node17: ['F'] }, evidence: {}, expected: 0.0101 },
+  { event: { node18: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node18: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node19: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node19: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node20: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node20: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node21: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node21: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node22: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node22: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node23: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node23: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node24: ['T'] }, evidence: {}, expected: 0.0198 },
+  { event: { node24: ['F'] }, evidence: {}, expected: 0.9802 },
+  { event: { node25: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node25: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node26: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node26: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node27: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node27: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node28: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node28: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node29: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node29: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node30: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node30: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node31: ['T'] }, evidence: {}, expected: 0.9803 },
+  { event: { node31: ['F'] }, evidence: {}, expected: 0.0197 },
+  { event: { node32: ['T'] }, evidence: {}, expected: 0.9803 },
+  { event: { node32: ['F'] }, evidence: {}, expected: 0.0197 },
+  { event: { node33: ['T'] }, evidence: {}, expected: 0.9803 },
+  { event: { node33: ['F'] }, evidence: {}, expected: 0.0197 },
+  { event: { node34: ['T'] }, evidence: {}, expected: 0.9803 },
+  { event: { node34: ['F'] }, evidence: {}, expected: 0.0197 },
+  { event: { node35: ['T'] }, evidence: {}, expected: 0.9803 },
+  { event: { node35: ['F'] }, evidence: {}, expected: 0.0197 },
+  { event: { node36: ['T'] }, evidence: {}, expected: 0.0000 },
+  { event: { node36: ['F'] }, evidence: {}, expected: 1.0000 },
+  { event: { node37: ['T'] }, evidence: {}, expected: 0.9899 },
+  { event: { node37: ['F'] }, evidence: {}, expected: 0.0101 },
+  { event: { node38: ['T'] }, evidence: {}, expected: 0.9899 },
+  { event: { node38: ['F'] }, evidence: {}, expected: 0.0101 },
+  { event: { node39: ['T'] }, evidence: {}, expected: 0.9900 },
+  { event: { node39: ['F'] }, evidence: {}, expected: 0.0100 },
+  { event: { node26: ['T'], node27: ['T'], node25: ['T'] }, evidence: {}, expected: 0.9703 },
+  { event: { node1: ['T'] }, evidence: { node1: ['T'] }, expected: 1.0000 },
+  { event: { node1: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0000 },
+  { event: { node2: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node2: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node3: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node3: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node4: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node4: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node5: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node5: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node6: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node6: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node7: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node7: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node8: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node8: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node9: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node9: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node10: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9899 },
+  { event: { node10: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0101 },
+  { event: { node11: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node11: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node12: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node12: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node13: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9899 },
+  { event: { node13: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0101 },
+  { event: { node14: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node14: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node15: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node15: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node16: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node16: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node17: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9899 },
+  { event: { node17: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0101 },
+  { event: { node18: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node18: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node19: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node19: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node20: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node20: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node21: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node21: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node22: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node22: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node23: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node23: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node24: ['T'] }, evidence: { node1: ['T'] }, expected: 0.0101 },
+  { event: { node24: ['F'] }, evidence: { node1: ['T'] }, expected: 0.9899 },
+  { event: { node25: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9999 },
+  { event: { node25: ['F'] }, evidence: { node1: ['T'] }, expected: 1.02E-4 },
+  { event: { node26: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node26: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node27: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node27: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node28: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node28: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node29: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node29: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node30: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node30: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node31: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node31: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node32: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node32: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node33: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node33: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node34: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node34: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node35: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node35: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
+  { event: { node36: ['T'] }, evidence: { node1: ['T'] }, expected: 0.0000 },
+  { event: { node36: ['F'] }, evidence: { node1: ['T'] }, expected: 1.0000 },
+  { event: { node37: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9899 },
+  { event: { node37: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0101 },
+  { event: { node38: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9899 },
+  { event: { node38: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0101 },
+  { event: { node39: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9900 },
+  { event: { node39: ['F'] }, evidence: { node1: ['T'] }, expected: 0.0100 },
   // Test of joint probability of nodes in the same clique
-  expect(infer({ node26: ['T'], node27: ['T'], node25: ['T'] }).toFixed(4)).toBe('0.9703')
-}
-
-const infersGiveNode1True = (engine: IInferenceEngine) => {
-  const { infer } = engine
-  engine.setEvidence({ node1: ['T'] })
-
-  expect(infer({ node1: ['T'] }).toFixed(4)).toBe('1.0000')
-  expect(infer({ node1: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node2: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node2: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node3: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node3: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node4: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node4: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node5: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node5: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node6: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node6: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node7: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node7: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node8: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node8: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node9: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node9: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node10: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node10: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node11: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node11: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node12: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node12: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node13: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node13: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node14: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node14: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node15: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node15: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node16: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node16: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node17: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node17: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node18: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node18: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node19: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node19: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node20: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node20: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node21: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node21: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node22: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node22: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node23: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node23: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node24: ['T'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node24: ['F'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node25: ['T'] }).toFixed(4)).toBe('0.9999')
-  expect(infer({ node25: ['F'] }).toFixed(4)).toBe('0.0001')
-  expect(infer({ node26: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node26: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node27: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node27: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node28: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node28: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node29: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node29: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node30: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node30: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node31: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node31: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node32: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node32: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node33: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node33: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node34: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node34: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node35: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node35: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node36: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node36: ['F'] }).toFixed(4)).toBe('1.0000')
-  expect(infer({ node37: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node37: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node38: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node38: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node39: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node39: ['F'] }).toFixed(4)).toBe('0.0100')
+  { event: { node26: ['T'], node27: ['T'], node25: ['T'] }, evidence: { node1: ['T'] }, expected: 0.9800 },
+  { event: { node1: ['T'] }, evidence: { node1: ['F'] }, expected: 0.0000 },
+  { event: { node1: ['F'] }, evidence: { node1: ['F'] }, expected: 1.0000 },
+  { event: { node2: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node2: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node3: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node3: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node4: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node4: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node5: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node5: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node6: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node6: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node7: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node7: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node8: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node8: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node9: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node9: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node10: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9899 },
+  { event: { node10: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0101 },
+  { event: { node11: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node11: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node12: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node12: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node13: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9899 },
+  { event: { node13: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0101 },
+  { event: { node14: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node14: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node15: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node15: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node16: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node16: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node17: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9899 },
+  { event: { node17: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0101 },
+  { event: { node18: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node18: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node19: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node19: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node20: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node20: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node21: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node21: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node22: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node22: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node23: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node23: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node24: ['T'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node24: ['F'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node25: ['T'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node25: ['F'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node26: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node26: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node27: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node27: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node28: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node28: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node29: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node29: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node30: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node30: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node31: ['T'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node31: ['F'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node32: ['T'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node32: ['F'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node33: ['T'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node33: ['F'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node34: ['T'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node34: ['F'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node35: ['T'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node35: ['F'] }, evidence: { node1: ['F'] }, expected: 0.5000 },
+  { event: { node36: ['T'] }, evidence: { node1: ['F'] }, expected: 0.0000 },
+  { event: { node36: ['F'] }, evidence: { node1: ['F'] }, expected: 1.0000 },
+  { event: { node37: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9899 },
+  { event: { node37: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0101 },
+  { event: { node38: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9899 },
+  { event: { node38: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0101 },
+  { event: { node39: ['T'] }, evidence: { node1: ['F'] }, expected: 0.9900 },
+  { event: { node39: ['F'] }, evidence: { node1: ['F'] }, expected: 0.0100 },
+  { event: { node26: ['T'], node27: ['T'], node25: ['T'] }, evidence: { node1: ['F'] }, expected: 0.4901 },
+  { event: { node1: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9802 },
+  { event: { node1: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0198 },
+  { event: { node2: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node2: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node3: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node3: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node4: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node4: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node5: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node5: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node6: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node6: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node7: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node7: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node8: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node8: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node9: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node9: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node10: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9899 },
+  { event: { node10: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0101 },
+  { event: { node11: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node11: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node12: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node12: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node13: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9899 },
+  { event: { node13: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0101 },
+  { event: { node14: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node14: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node15: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node15: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node16: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node16: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node17: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9899 },
+  { event: { node17: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0101 },
+  { event: { node18: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node18: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node19: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node19: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node20: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node20: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node21: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node21: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node22: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node22: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node23: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node23: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node24: ['T'] }, evidence: { node39: ['T'] }, expected: 0.0198 },
+  { event: { node24: ['F'] }, evidence: { node39: ['T'] }, expected: 0.9802 },
+  { event: { node25: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node25: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node26: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node26: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node27: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node27: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node28: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node28: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node29: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node29: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node30: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node30: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node31: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9803 },
+  { event: { node31: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0197 },
+  { event: { node32: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9803 },
+  { event: { node32: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0197 },
+  { event: { node33: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9803 },
+  { event: { node33: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0197 },
+  { event: { node34: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9803 },
+  { event: { node34: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0197 },
+  { event: { node35: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9803 },
+  { event: { node35: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0197 },
+  { event: { node36: ['T'] }, evidence: { node39: ['T'] }, expected: 0.0000 },
+  { event: { node36: ['F'] }, evidence: { node39: ['T'] }, expected: 1.0000 },
+  { event: { node37: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9900 },
+  { event: { node37: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0100 },
+  { event: { node38: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9899 },
+  { event: { node38: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0101 },
+  { event: { node39: ['T'] }, evidence: { node39: ['T'] }, expected: 1.0000 },
+  { event: { node39: ['F'] }, evidence: { node39: ['T'] }, expected: 0.0000 },
+  { event: { node26: ['T'], node27: ['T'], node25: ['T'] }, evidence: { node39: ['T'] }, expected: 0.9703 },
+  { event: { node1: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9802 },
+  { event: { node1: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0198 },
+  { event: { node2: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node2: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node3: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node3: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node4: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node4: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node5: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node5: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node6: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node6: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node7: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node7: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node8: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node8: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node9: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node9: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node10: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9899 },
+  { event: { node10: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0101 },
+  { event: { node11: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node11: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node12: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node12: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node13: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9899 },
+  { event: { node13: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0101 },
+  { event: { node14: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node14: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node15: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node15: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node16: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node16: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node17: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9899 },
+  { event: { node17: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0101 },
+  { event: { node18: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node18: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node19: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node19: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node20: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node20: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node21: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node21: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node22: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node22: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node23: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node23: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node24: ['T'] }, evidence: { node39: ['F'] }, expected: 0.0198 },
+  { event: { node24: ['F'] }, evidence: { node39: ['F'] }, expected: 0.9802 },
+  { event: { node25: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node25: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node26: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node26: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node27: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node27: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node28: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node28: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node29: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node29: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node30: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9900 },
+  { event: { node30: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0100 },
+  { event: { node31: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9803 },
+  { event: { node31: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0197 },
+  { event: { node32: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9803 },
+  { event: { node32: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0197 },
+  { event: { node33: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9803 },
+  { event: { node33: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0197 },
+  { event: { node34: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9803 },
+  { event: { node34: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0197 },
+  { event: { node35: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9803 },
+  { event: { node35: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0197 },
+  { event: { node36: ['T'] }, evidence: { node39: ['F'] }, expected: 0.0000 },
+  { event: { node36: ['F'] }, evidence: { node39: ['F'] }, expected: 1.0000 },
+  { event: { node37: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9801 },
+  { event: { node37: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0199 },
+  { event: { node38: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9899 },
+  { event: { node38: ['F'] }, evidence: { node39: ['F'] }, expected: 0.0101 },
+  { event: { node39: ['T'] }, evidence: { node39: ['F'] }, expected: 0.0000 },
+  { event: { node39: ['F'] }, evidence: { node39: ['F'] }, expected: 1.0000 },
+  { event: { node26: ['T'], node27: ['T'], node25: ['T'] }, evidence: { node39: ['F'] }, expected: 0.9703 },
+  { event: { node1: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node1: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node2: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node2: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node3: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node3: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node4: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node4: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node5: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node5: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node6: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node6: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node7: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node7: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node8: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node8: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node9: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node9: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node10: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node10: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node11: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node11: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node12: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node12: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node13: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node13: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node14: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node14: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node15: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node15: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node16: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node16: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node17: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node17: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node18: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node18: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node19: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node19: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node20: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node20: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node21: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node21: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node22: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node22: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node23: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node23: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node24: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node24: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node25: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node25: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node26: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node26: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node27: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node27: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node28: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node28: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node29: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node29: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node30: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node30: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node31: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node31: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node32: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node32: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node33: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node33: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node34: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node34: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node35: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node35: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node36: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node36: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node37: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node37: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node38: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node38: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node39: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node39: ['F'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node26: ['T'], node27: ['T'], node25: ['T'] }, evidence: { node36: ['T'] }, expected: 0.0000 },
+  { event: { node1: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9802 },
+  { event: { node1: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0198 },
+  { event: { node2: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node2: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node3: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node3: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node4: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node4: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node5: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node5: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node6: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node6: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node7: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node7: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node8: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node8: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node9: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node9: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node10: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9899 },
+  { event: { node10: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0101 },
+  { event: { node11: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node11: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node12: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node12: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node13: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9899 },
+  { event: { node13: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0101 },
+  { event: { node14: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node14: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node15: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node15: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node16: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node16: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node17: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9899 },
+  { event: { node17: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0101 },
+  { event: { node18: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node18: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node19: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node19: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node20: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node20: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node21: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node21: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node22: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node22: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node23: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node23: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node24: ['T'] }, evidence: { node36: ['F'] }, expected: 0.0198 },
+  { event: { node24: ['F'] }, evidence: { node36: ['F'] }, expected: 0.9802 },
+  { event: { node25: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node25: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node26: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node26: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node27: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node27: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node28: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node28: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node29: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node29: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node30: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node30: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
+  { event: { node31: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9803 },
+  { event: { node31: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0197 },
+  { event: { node32: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9803 },
+  { event: { node32: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0197 },
+  { event: { node33: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9803 },
+  { event: { node33: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0197 },
+  { event: { node34: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9803 },
+  { event: { node34: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0197 },
+  { event: { node35: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9803 },
+  { event: { node35: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0197 },
+  { event: { node36: ['T'] }, evidence: { node36: ['F'] }, expected: 0.0000 },
+  { event: { node36: ['F'] }, evidence: { node36: ['F'] }, expected: 1.0000 },
+  { event: { node37: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9899 },
+  { event: { node37: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0101 },
+  { event: { node38: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9899 },
+  { event: { node38: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0101 },
+  { event: { node39: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9900 },
+  { event: { node39: ['F'] }, evidence: { node36: ['F'] }, expected: 0.0100 },
   // Test of joint probability of nodes in the same clique
-  expect(infer({ node26: ['T'], node27: ['T'], node25: ['T'] }).toFixed(4)).toBe('0.9800')
-}
+  { event: { node26: ['T'], node27: ['T'], node25: ['T'] }, evidence: { node36: ['F'] }, expected: 0.9703 },
+]
 
-const infersGiveNode1False = (engine: IInferenceEngine) => {
-  const { infer } = engine
-  engine.setEvidence({ node1: ['F'] })
-
-  expect(infer({ node1: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node1: ['F'] }).toFixed(4)).toBe('1.0000')
-  expect(infer({ node2: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node2: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node3: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node3: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node4: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node4: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node5: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node5: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node6: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node6: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node7: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node7: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node8: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node8: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node9: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node9: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node10: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node10: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node11: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node11: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node12: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node12: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node13: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node13: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node14: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node14: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node15: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node15: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node16: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node16: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node17: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node17: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node18: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node18: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node19: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node19: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node20: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node20: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node21: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node21: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node22: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node22: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node23: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node23: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node24: ['T'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node24: ['F'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node25: ['T'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node25: ['F'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node26: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node26: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node27: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node27: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node28: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node28: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node29: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node29: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node30: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node30: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node31: ['T'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node31: ['F'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node32: ['T'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node32: ['F'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node33: ['T'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node33: ['F'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node34: ['T'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node34: ['F'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node35: ['T'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node35: ['F'] }).toFixed(4)).toBe('0.5000')
-  expect(infer({ node36: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node36: ['F'] }).toFixed(4)).toBe('1.0000')
-  expect(infer({ node37: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node37: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node38: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node38: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node39: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node39: ['F'] }).toFixed(4)).toBe('0.0100')
-  // Test of joint probability of nodes in the same clique
-  expect(infer({ node26: ['T'], node27: ['T'], node25: ['T'] }).toFixed(4)).toBe('0.4901')
-}
-
-const infersGiveNode39True = (engine: IInferenceEngine) => {
-  const { infer } = engine
-  engine.setEvidence({ node39: ['T'] })
-
-  expect(infer({ node1: ['T'] }).toFixed(4)).toBe('0.9802')
-  expect(infer({ node1: ['F'] }).toFixed(4)).toBe('0.0198')
-  expect(infer({ node2: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node2: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node3: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node3: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node4: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node4: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node5: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node5: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node6: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node6: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node7: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node7: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node8: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node8: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node9: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node9: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node10: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node10: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node11: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node11: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node12: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node12: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node13: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node13: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node14: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node14: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node15: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node15: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node16: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node16: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node17: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node17: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node18: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node18: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node19: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node19: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node20: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node20: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node21: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node21: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node22: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node22: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node23: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node23: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node24: ['T'] }).toFixed(4)).toBe('0.0198')
-  expect(infer({ node24: ['F'] }).toFixed(4)).toBe('0.9802')
-  expect(infer({ node25: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node25: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node26: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node26: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node27: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node27: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node28: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node28: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node29: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node29: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node30: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node30: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node31: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node31: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node32: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node32: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node33: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node33: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node34: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node34: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node35: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node35: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node36: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node36: ['F'] }).toFixed(4)).toBe('1.0000')
-  expect(infer({ node37: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node37: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node38: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node38: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node39: ['T'] }).toFixed(4)).toBe('1.0000')
-  expect(infer({ node39: ['F'] }).toFixed(4)).toBe('0.0000')
-  // Test of joint probability of nodes in the same clique
-  expect(infer({ node26: ['T'], node27: ['T'], node25: ['T'] }).toFixed(4)).toBe('0.9703')
-}
-
-const infersGiveNode39False = (engine: IInferenceEngine) => {
-  const { infer } = engine
-  engine.setEvidence({ node39: ['F'] })
-
-  expect(infer({ node1: ['T'] }).toFixed(4)).toBe('0.9802')
-  expect(infer({ node1: ['F'] }).toFixed(4)).toBe('0.0198')
-  expect(infer({ node2: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node2: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node3: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node3: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node4: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node4: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node5: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node5: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node6: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node6: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node7: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node7: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node8: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node8: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node9: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node9: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node10: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node10: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node11: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node11: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node12: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node12: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node13: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node13: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node14: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node14: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node15: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node15: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node16: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node16: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node17: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node17: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node18: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node18: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node19: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node19: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node20: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node20: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node21: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node21: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node22: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node22: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node23: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node23: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node24: ['T'] }).toFixed(4)).toBe('0.0198')
-  expect(infer({ node24: ['F'] }).toFixed(4)).toBe('0.9802')
-  expect(infer({ node25: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node25: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node26: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node26: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node27: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node27: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node28: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node28: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node29: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node29: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node30: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node30: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node31: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node31: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node32: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node32: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node33: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node33: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node34: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node34: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node35: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node35: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node36: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node36: ['F'] }).toFixed(4)).toBe('1.0000')
-  expect(infer({ node37: ['T'] }).toFixed(4)).toBe('0.9801')
-  expect(infer({ node37: ['F'] }).toFixed(4)).toBe('0.0199')
-  expect(infer({ node38: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node38: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node39: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node39: ['F'] }).toFixed(4)).toBe('1.0000')
-  // Test of joint probability of nodes in the same clique
-  expect(infer({ node26: ['T'], node27: ['T'], node25: ['T'] }).toFixed(4)).toBe('0.9703')
-}
-
-const infersGiveNode36True = (engine: IInferenceEngine) => {
-  const { infer } = engine
-  engine.setEvidence({ node36: ['T'] })
-
-  expect(infer({ node1: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node1: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node2: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node2: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node3: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node3: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node4: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node4: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node5: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node5: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node6: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node6: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node7: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node7: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node8: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node8: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node9: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node9: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node10: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node10: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node11: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node11: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node12: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node12: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node13: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node13: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node14: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node14: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node15: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node15: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node16: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node16: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node17: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node17: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node18: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node18: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node19: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node19: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node20: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node20: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node21: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node21: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node22: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node22: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node23: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node23: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node24: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node24: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node25: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node25: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node26: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node26: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node27: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node27: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node28: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node28: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node29: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node29: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node30: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node30: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node31: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node31: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node32: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node32: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node33: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node33: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node34: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node34: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node35: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node35: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node36: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node36: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node37: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node37: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node38: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node38: ['F'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node39: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node39: ['F'] }).toFixed(4)).toBe('0.0000')
-  // Test of joint probability of nodes in the same clique
-  expect(infer({ node26: ['T'], node27: ['T'], node25: ['T'] }).toFixed(4)).toBe('0.0000')
-}
-
-const infersGiveNode36False = (engine: IInferenceEngine) => {
-  const { infer } = engine
-  engine.setEvidence({ node36: ['F'] })
-
-  expect(infer({ node1: ['T'] }).toFixed(4)).toBe('0.9802')
-  expect(infer({ node1: ['F'] }).toFixed(4)).toBe('0.0198')
-  expect(infer({ node2: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node2: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node3: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node3: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node4: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node4: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node5: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node5: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node6: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node6: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node7: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node7: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node8: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node8: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node9: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node9: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node10: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node10: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node11: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node11: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node12: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node12: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node13: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node13: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node14: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node14: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node15: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node15: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node16: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node16: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node17: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node17: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node18: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node18: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node19: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node19: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node20: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node20: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node21: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node21: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node22: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node22: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node23: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node23: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node24: ['T'] }).toFixed(4)).toBe('0.0198')
-  expect(infer({ node24: ['F'] }).toFixed(4)).toBe('0.9802')
-  expect(infer({ node25: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node25: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node26: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node26: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node27: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node27: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node28: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node28: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node29: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node29: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node30: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node30: ['F'] }).toFixed(4)).toBe('0.0100')
-  expect(infer({ node31: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node31: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node32: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node32: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node33: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node33: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node34: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node34: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node35: ['T'] }).toFixed(4)).toBe('0.9803')
-  expect(infer({ node35: ['F'] }).toFixed(4)).toBe('0.0197')
-  expect(infer({ node36: ['T'] }).toFixed(4)).toBe('0.0000')
-  expect(infer({ node36: ['F'] }).toFixed(4)).toBe('1.0000')
-  expect(infer({ node37: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node37: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node38: ['T'] }).toFixed(4)).toBe('0.9899')
-  expect(infer({ node38: ['F'] }).toFixed(4)).toBe('0.0101')
-  expect(infer({ node39: ['T'] }).toFixed(4)).toBe('0.9900')
-  expect(infer({ node39: ['F'] }).toFixed(4)).toBe('0.0100')
-  // Test of joint probability of nodes in the same clique
-  expect(infer({ node26: ['T'], node27: ['T'], node25: ['T'] }).toFixed(4)).toBe('0.9703')
-}
-
-const tests: { [key: string]: (engine: IInferenceEngine) => void } = {
-  'infers give no evidence': infersGiveNoEvidence,
-  'infers give Node1 True': infersGiveNode1True,
-  'infers give Node1 False': infersGiveNode1False,
-  'infers give Node36 True': infersGiveNode36True,
-  'infers give Node36 False': infersGiveNode36False,
-  'infers give Node39 True': infersGiveNode39True,
-  'infers give Node39 False': infersGiveNode39False,
-}
-
-describe('infers', () => {
-  describe('hugeNetwork', () => {
-    const testNames = Object.keys(tests)
-
-    const engine = new InferenceEngine(network)
-    for (const testName of testNames) {
-      const createMethod = tests[testName]
-      it(`${testName} with Junction Tree`, () => createMethod(engine))
-    }
-  })
-})
+describe('inference on alarm network', () => runTest(network, testCases))

@@ -76,7 +76,21 @@ export function setDistribution (distribution: Distribution, nodes: FastNode[], 
   const innerNumberOfLevels = innerDomain.map(i => numberOfLevels[i])
   const size = product(numberOfLevels)
 
-  potentials[node.id] = evaluateMarginalPure(innerPotential, innerDomain, innerNumberOfLevels, domain, numberOfLevels, size)
+  const result = evaluateMarginalPure(innerPotential, innerDomain, innerNumberOfLevels, domain, numberOfLevels, size)
+  if (domain.length > 1) {
+    // normalize the blocks of the potential
+    const [blocksize] = numberOfLevels
+    const numberOfBlocks = Math.floor(result.length / blocksize)
+    for (let blockIdx = 0; blockIdx < numberOfBlocks; blockIdx++) {
+      const total = sum(result.slice(blockIdx * blocksize, (blockIdx + 1) * blocksize))
+      if (total !== 0) {
+        for (let j = blockIdx * blocksize; j < (blockIdx + 1) * blocksize; j++) result[j] = result[j] / total
+      }
+    }
+    potentials[node.id] = result
+  } else {
+    potentials[node.id] = result
+  }
   return node.id
 }
 
@@ -399,7 +413,6 @@ export function initializePriorNodePotentials (network: {[name: string]: {
     const levels = [node.levels, ...node.parents.map(x => fastNodes[x].levels)]
     if (network[node.name].cpt) {
       const dist = fromCPT(node.name, parentNames, levels, network[node.name].cpt as ICptWithParents | ICptWithoutParents)
-      // console.warn('The use of ICptWithParents or ICptWithoutParents is deprecated and will be removed in a future version.   Replace with Distribution objects to avoid this warning.')
       setDistribution(dist, fastNodes, potentials)
       return
     }

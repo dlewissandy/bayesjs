@@ -1,10 +1,8 @@
-import { FastPotential } from './FastPotential'
 import { FastClique } from './FastClique'
 import { Formula, EvidenceFunction, FormulaType, reference, marginalize, mult } from './Formula'
 import { uniqBy, uniq, reduce, partition } from 'ramda'
-import { evaluateMarginalPure, evaluate } from './evaluation'
 import { FastNode } from './FastNode'
-import { upsertFormula, pickRootClique } from './util'
+import { pickRootClique, upsertFormula } from './util'
 
 // This helper function is used to create a distinct identifier for messages
 // passed between two cliques.
@@ -147,7 +145,9 @@ function collectCliquesEvidence (cliques: FastClique[], separators: number[][], 
 }
 
 /** Construct the join of an arbitrary collection of variables in a Bayesian Network,
- * conditioned on an optional set of parent variables.
+ * conditioned on an optional set of parent variables.   This is performed by a
+ * modified symbolic message passing strategy, whereby variables that appear in the
+ * join are not marginlized out of the messages passed between cliques.
  * @param nodes: The collection of nodes in the bayesian network
  * @param cliques: The collection of cliques in the junction tree for the bayesian
  *   network.
@@ -163,13 +163,12 @@ function collectCliquesEvidence (cliques: FastClique[], separators: number[][], 
  *   of the joint distribution being constructed.   These indices must be valid
  *   references for the variables in the network, and must be distinct from the
  *   head variables of the joint being constructed.
- * @returns: The potential function for the join which satisfies the conditions
- *   that for every combination of parents, the potentials sum to unity.  The
- *   case when there are no parents (unconditioned joint distribution), corresponds
- *   to the trivial case where there is only a single (empty) combination of
- *   parent values.
+ * @returns: The formula for the requested joint distribution and the symbolic
+ *   repersentation of all the intermediate calculations that were not part of the
+ *   original message passing.   Note that the joint distribution when evalatuated
+ *   will be isomorphic to the requested join up to a permutation of the parent variables.
  */
-export function createJoin (nodes: FastNode[], cliques: FastClique[], connectedComponents: number[][], formulas: Formula[], potentials: (FastPotential|null)[], separators: number[][], headVariables: number[], parentVariables: number[]): FastPotential {
+export function propagateJoinMessages (nodes: FastNode[], cliques: FastClique[], connectedComponents: number[][], formulas: Formula[], separators: number[][], headVariables: number[], parentVariables: number[]): { joinFormulaId: number; supplementalFormulas: Formula[] } {
   const distinctHeadVariables = uniq(headVariables)
   const distinctParentVariables = uniq(parentVariables)
 
@@ -186,7 +185,7 @@ export function createJoin (nodes: FastNode[], cliques: FastClique[], connectedC
   // Create a copy of the formulas that we can use for performing the traversal.   This collection of formulas
   // may be updated during message passing with new formulas that were not part of the original
   // junction tree message passing.
-  const temporaryFormulas = [...formulas]
+  const amendedFormulas = [...formulas]
 
   // Create a list of connected components that have some of the variables of interest.
   // Each of these connected components will need to be traversed to compute the joint
@@ -200,12 +199,12 @@ export function createJoin (nodes: FastNode[], cliques: FastClique[], connectedC
   // of effort.
   const messages: Record<string, Formula[]> = {}
   const fmap: Record<string, number> = {}
-  temporaryFormulas.forEach((f, i) => {
+  formulas.forEach((f, i) => {
     fmap[f.name] = i
   })
   // This helper function will be used during message passing to add new formulas
   // to the dictionary, but only if it doesn't already exist.
-  const upsert = upsertFormula(temporaryFormulas, fmap)
+  const upsert = upsertFormula(amendedFormulas, fmap)
 
   // traverse each connected component, collecting all the messages into
   // a root clique.   This traversal will return the formula for the join of
@@ -216,28 +215,28 @@ export function createJoin (nodes: FastNode[], cliques: FastClique[], connectedC
     const theseVariables = joinDomain.filter(i => theseCliques.some(c => c.domain.includes(i)))
 
     // find a best root clique into which the messages will be collected
-    const rootClique = pickRootClique(theseCliques, theseVariables, temporaryFormulas)
+    const rootClique = pickRootClique(theseCliques, theseVariables, amendedFormulas)
 
     // recursively collect the evidence from the neihgbor cliques.   This message passing
     // has been modified from the one used for making the clique graph consistent in that
     // it does not marginalize out the variables in the join domain.  The clique evidence
     // does not need to be distributed out to the other nodes because they are already
     // consistent.
-    collectCliquesEvidence(cliques, separators, messages, upsert, temporaryFormulas, theseVariables, rootClique.id)
+    collectCliquesEvidence(cliques, separators, messages, upsert, amendedFormulas, theseVariables, rootClique.id)
     const messagesReceived: Formula[][] = rootClique.neighbors.map(x => messages[messageName(x, rootClique.id)] || [])
     // after receiving the messages, we need to multiply them together with the root clique's
     // prior distribution.   This may already be a formula, so we use the upsert to avoid
     // creating a duplicate.
     const cliqueFormula = upsert(mult([
-      reference(rootClique.prior, temporaryFormulas),
+      reference(rootClique.prior, amendedFormulas),
       ...reduce((acc: Formula[], xs: Formula[]) => { acc.push(...xs); return acc }, [], messagesReceived),
-      ...rootClique.domain.map(id => temporaryFormulas[nodes[id].evidenceFunction]),
+      ...rootClique.domain.map(id => amendedFormulas[nodes[id].evidenceFunction]),
     ],
     ))
     // The clique formula may need to be marginalized after collecting the evidence to remove
     // variables that do not occur in the join.   Again, we use the upsert to avoid creating
     // a duplicated formula.
-    const ccFormula = upsert(marginalize(theseVariables, cliqueFormula, temporaryFormulas))
+    const ccFormula = upsert(marginalize(theseVariables, cliqueFormula, amendedFormulas))
     return ccFormula
   })
 
@@ -245,20 +244,8 @@ export function createJoin (nodes: FastNode[], cliques: FastClique[], connectedC
   // formula for the overall joint distribution.   Since it is possible that this formula
   // already exists, we use upsert to avoid creating a duplicate.
   const jointFormula = upsert(mult(cliqueFormulas))
-
-  // Finally we need to evaluate the joint formula.   We initialize an array of potential
-  // functions with the previously computed potentials, and enough new elements to cover
-  // the formulas added during message passing.   Then we evaluate the joint formula using
-  // that context.
-  const ps = [...potentials, ...Array(temporaryFormulas.length - formulas.length).fill(null)]
-  const joint = evaluate(jointFormula.id, nodes, temporaryFormulas, ps)
-
-  // The computed joint distribution may have the elements in a different order than we
-  // want.   If this is the case, then we use the evaluateMarginalPure function to
-  // permute the elements.  Otherwise, we return the joint potentials as is.
-  if (jointFormula.domain.every((n, i) => n === joinDomain[i])) {
-    return joint
-  } else {
-    return evaluateMarginalPure(joint, jointFormula.domain, jointFormula.domain.map(i => nodes[i].levels.length), joinDomain, joinDomain.map(i => nodes[i].levels.length), joint.length)
+  return {
+    joinFormulaId: jointFormula.id,
+    supplementalFormulas: amendedFormulas.slice(formulas.length),
   }
 }

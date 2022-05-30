@@ -14,9 +14,9 @@ const toPrecision = (n: number, p = 4) => Number.parseFloat(n.toPrecision(p))
 describe('inference on non-binary-distribution', () => {
   describe('without evidence', () => {
     it('infers the correct marginal for a variable with no parents', () => {
-      expect(engine.infer({ A: ['1'] })).toEqual(0.10)
-      expect(engine.infer({ A: ['2'] })).toEqual(0.70)
-      expect(engine.infer({ A: ['3'] })).toEqual(0.20)
+      expect(toPrecision(engine.infer({ A: ['1'] }))).toEqual(0.10)
+      expect(toPrecision(engine.infer({ A: ['2'] }))).toEqual(0.70)
+      expect(toPrecision(engine.infer({ A: ['3'] }))).toEqual(0.20)
     })
     it('infers the correct marginal for a node with 1 parent', () => {
       expect(toPrecision(engine.infer({ B: ['a'] }))).toEqual(0.17)

@@ -2,7 +2,7 @@ import {
   INetworkResult,
   IInferenceEngine, IInferAllOptions, ICptWithParents, ICptWithoutParents,
 } from '../types'
-import { clone, uniq, partition } from 'ramda'
+import { clone, uniq } from 'ramda'
 import roundTo = require('round-to')
 
 import { FastPotential, indexToCombination } from './FastPotential'
@@ -12,9 +12,10 @@ import { NodeId, FormulaId } from './common'
 import { Formula, EvidenceFunction, updateReferences } from './Formula'
 import { propagatePotentials } from './symbolic-propagation'
 import { evaluate } from './evaluation'
-import { getNetworkInfo, initializeCliques, initializeEvidence, initializeNodeParents, initializeNodes, initializePosteriorCliquePotentials, initializePosteriorNodePotentials, initializePriorNodePotentials, initializeSeparatorPotentials, NetworkInfo, upsertFormula, setDistribution, pickRootClique } from './util'
+import { getNetworkInfo, initializeCliques, initializeEvidence, initializeNodeParents, initializeNodes, initializePosteriorCliquePotentials, initializePosteriorNodePotentials, initializePriorNodePotentials, initializeSeparatorPotentials, NetworkInfo, upsertFormula, setDistribution } from './util'
 import { Distribution } from './Distribution'
-import { createJoin } from './arbitrary-join'
+import { evaluateJoinPotentials } from './evaluate-join-potential'
+import { inferJoinProbability } from './evaluate-join-probability'
 import { getRandomSample } from './random-sample'
 
 /** This inference engine uses a modified version of the lazy cautious message
@@ -149,8 +150,8 @@ export class LazyPropagationEngine implements IInferenceEngine {
   getJointDistribution = (headVariables: string[], parentVariables: string[]): Distribution => {
     const parentIdxs: number[] = parentVariables.map(s => this._nodes.findIndex(node => node.name === s))
     const headIdxs: number[] = headVariables.map(s => this._nodes.findIndex(node => node.name === s))
-    const potentialFunction = createJoin(this._nodes, this._cliques, this._connectedComponents, this._formulas, this._potentials, this._separators, headIdxs, parentIdxs)
-    const dist = new Distribution(headIdxs.map(n => this._nodes[n]), parentIdxs.map(n => this._nodes[n]), potentialFunction)
+    const { potentials } = evaluateJoinPotentials(this._nodes, this._cliques, this._connectedComponents, this._separators, this._formulas, this._potentials, headIdxs, parentIdxs)
+    const dist = new Distribution(headIdxs.map(n => this._nodes[n]), parentIdxs.map(n => this._nodes[n]), potentials)
     return dist
   }
 
@@ -317,53 +318,32 @@ export class LazyPropagationEngine implements IInferenceEngine {
    * expensive recomputation.  This is left as future work.
    */
   private inferFromJointDistribution (event: { nodeId: number; levels: number[]}[]): number {
-  // cache the initial state so that we can restore the evidence and potentials to their original
-  // state upon completion.
-    const initialPotentials = [...this._potentials]
     const initialEvidence = this.getAllEvidence()
-    // remove any nodes that have hard evidence.   Since we have ensured that the event is not
-    // inconsistent with the evidence, then their probability will be unity.
-    let unvisited = event.filter(({ nodeId }) => {
-      const efunc = this._formulas[this._nodes[nodeId].evidenceFunction] as EvidenceFunction
-      return !efunc.levels || efunc.levels.length > 1
+    const evidenceAsEvent: {nodeId: number; levels: number[]}[] = []
+    this._nodes.forEach(node => {
+      const e: EvidenceFunction = this._formulas[node.evidenceFunction] as EvidenceFunction
+      if (e.levels && e.levels.length > 0) evidenceAsEvent.push({ nodeId: e.nodeId, levels: e.levels })
     })
+    this.removeAllEvidence()
 
-    let result = 1
-
-    let possibleCliques = this._cliques.filter(clique => unvisited.some(({ nodeId }) => clique.domain.includes(nodeId)))
-
-    // if there are any variables that participate in the event, and for which all of the
-    // parents have either hard evidence
-
-    while (unvisited.length > 0) {
-      // Pick a clique that has the largest number of unvisited variables.
-      const clique = pickRootClique(possibleCliques, unvisited.map(x => x.nodeId), this._formulas)
-      const [visited, us] = partition(({ nodeId }) => clique.domain.includes(nodeId), unvisited)
-      // If there are more than one unvisted variables that are in that clique, then we need to
-      // infer the probability from the posterior distribution of that clique.
-      if (visited.length > 0) {
-        result *= this.inferFromClique(clique, visited)
-        visited.forEach(({ nodeId, levels }) =>
-          this.updateEvidencePrimitive(nodeId, levels),
-        )
-        unvisited = us
-        possibleCliques = possibleCliques.filter(clique => unvisited.some(({ nodeId }) => clique.domain.includes(nodeId)))
-      } else {
-      // If there is only one unvisited variable in the clique, then all the remaining
-      // unvisited variables can be inferred more efficiently from their posterior marginal
-      // distribution.
-        unvisited.forEach(({ nodeId, levels }) => {
-          result *= this.inferFromMarginal(nodeId, levels)
-          this.updateEvidencePrimitive(nodeId, levels)
-        })
-        unvisited = []
-      }
+    const inferJoint = (event: {nodeId: number; levels: number[]}[]): number => {
+      const joinDomain = event.map(({ nodeId }) => nodeId)
+      const values = this._nodes.map(node => {
+        const e = event.find(entry => entry.nodeId === node.id)
+        return e?.levels ?? null
+      })
+      const { joinProbability } = inferJoinProbability(this._nodes, this._cliques, this._connectedComponents, this._separators, this._formulas, this._potentials, joinDomain, values)
+      return joinProbability
     }
 
-    // restore the engine to its original state
-    this.setEvidence(initialEvidence)
-    this._potentials = initialPotentials
+    const eventNodeIds: number[] = event.map(x => x.nodeId)
+    const joinProbability = inferJoint(event.concat(evidenceAsEvent.filter(e => !eventNodeIds.includes(e.nodeId))))
 
+    const parentProbability = (evidenceAsEvent.length > 0) ? inferJoint(evidenceAsEvent) : 1
+
+    if (evidenceAsEvent.length > 0) { this.setEvidence(initialEvidence) }
+
+    const result = joinProbability === 0 ? 0 : joinProbability / parentProbability
     return result
   }
 
