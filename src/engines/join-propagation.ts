@@ -177,7 +177,7 @@ export function propagateJoinMessages (nodes: FastNode[], cliques: FastClique[],
   if (headVariables.length === 0) throwErr('No head variables were provided.')
   if (headVariables.length < distinctHeadVariables.length) throwErr('The head variables are not distinct.')
   if (parentVariables.length < distinctParentVariables.length) throwErr('The parent variables are not distinct.')
-  if (distinctHeadVariables.some(x => distinctParentVariables.includes(x))) throwErr('The head and parent variables are not disjoint')
+  if (distinctHeadVariables.some(x => distinctParentVariables.includes(x))) throwErr('The head and parent variables are not disjoint.')
   if (distinctHeadVariables.some(x => x < 0 || x >= nodes.length)) throwErr('Some of the head variables do not exist in the network.')
   if (distinctParentVariables.some(x => x < 0 || x >= nodes.length)) throwErr('Some of the parent variables do not exist in the network.')
   const joinDomain = [...headVariables, ...parentVariables]

@@ -232,7 +232,7 @@ export class LazyPropagationEngine implements IInferenceEngine {
       if (node) {
         const lvlIdxs: number[] = uniq(evidence[name].map(l => node.levels.indexOf(l)))
 
-        if (lvlIdxs.length > 0 && lvlIdxs[0] === -1) throw new Error(`Cannot update the evidence.   One of levels provided for ${node.name} is not valid.`)
+        if (lvlIdxs.length > 0 && lvlIdxs[0] === -1) throw new Error(`Cannot update the evidence.  One of levels provided for ${node.name} is not valid.`)
         if (lvlIdxs.length > 0) {
           this.updateEvidencePrimitive(node.id, uniq(lvlIdxs))
         }
@@ -483,7 +483,7 @@ export class LazyPropagationEngine implements IInferenceEngine {
    */
   getRandomSample (size: number): Record<string, string>[] {
     // Some sanity checks
-    if (size < 0) throw new Error('Cannot generate random sample.   Sample size must be greater than zero.')
+    if (size < 0) throw new Error('Cannot generate random sample.  Sample size must be greater than zero.')
     if (size === 0) return []
     // ensure that all the clique potentials have been computed.
     return getRandomSample(this, size)

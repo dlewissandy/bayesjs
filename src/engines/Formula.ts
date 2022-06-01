@@ -141,7 +141,7 @@ export class Product {
       , [], factors))]
     this.numberOfLevels = this.domain.map(x => {
       const maybefactor = factors.find(factor => factor.domain.includes(x))
-      if (!maybefactor) throw new Error(`Domain of product ${this.name} contains nodes which are not in its factors`)
+      if (!maybefactor) throw new Error(`Domain of product ${this.name} contains nodes which are not in its factors.`)
       const factor = maybefactor as Formula
       return factor.numberOfLevels[factor.domain.findIndex(y => y === x)]
     })

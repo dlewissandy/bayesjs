@@ -210,8 +210,8 @@ export class Distribution {
   renameVariable (oldName: string, newName: string) {
     const oldIdx = this._variableNames.indexOf(oldName)
     const newIdx = this._variableNames.indexOf(newName)
-    if (oldIdx < 0) throw new Error(`Cannot rename variable ${oldName} to ${newName}.  It does not exist`)
-    if (newIdx >= 0) throw new Error(`Cannot rename variable ${oldName} to ${newName}.  A variable with the new name already exists`)
+    if (oldIdx < 0) throw new Error(`Cannot rename variable ${oldName} to ${newName}.  It does not exist.`)
+    if (newIdx >= 0) throw new Error(`Cannot rename variable ${oldName} to ${newName}.  A variable with the new name already exists.`)
     this._variableNames[oldIdx] = newName
   }
 
@@ -226,11 +226,11 @@ export class Distribution {
    */
   renameLevel (name: string, oldLevel: string, newLevel: string) {
     const Idx = this._variableNames.indexOf(name)
-    if (Idx < 0) throw new Error(`Cannot rename level ${oldLevel} to ${newLevel} of variable ${name}.  The variable does not exist`)
+    if (Idx < 0) throw new Error(`Cannot rename level ${oldLevel} to ${newLevel} of variable ${name}.  The variable does not exist.`)
     const oldIdx = this._variableLevels[Idx].indexOf(oldLevel)
     const newIdx = this._variableLevels[Idx].indexOf(newLevel)
-    if (oldIdx < 0) throw new Error(`Cannot rename level ${oldLevel} to ${newLevel} of variable ${name}.  The old level does not exist`)
-    if (newIdx >= 0) throw new Error(`Cannot rename level ${oldLevel} to ${newLevel} of variable ${name}.  The new level already exists`)
+    if (oldIdx < 0) throw new Error(`Cannot rename level ${oldLevel} to ${newLevel} of variable ${name}.  The old level does not exist.`)
+    if (newIdx >= 0) throw new Error(`Cannot rename level ${oldLevel} to ${newLevel} of variable ${name}.  The new level already exists.`)
     this._variableLevels[Idx][oldIdx] = newLevel
   }
 
@@ -240,13 +240,13 @@ export class Distribution {
 
   setPotentials (potentials: FastPotential) {
     const numberOfLevels = this._variableLevels.map(x => x.length)
-    if (potentials.length !== product(numberOfLevels)) { throw new Error('Cannot set the potentials for the distribution.   The provided array has the wrong number of elements.') }
+    if (potentials.length !== product(numberOfLevels)) { throw new Error('Cannot set the potentials for the distribution.  The provided array has the wrong number of elements.') }
     // verify that each block of a conditional distribution is non-zero
     const blocksize = product(numberOfLevels.slice(0, this._numberOfHeadVariables))
     let total = 0
     for (let i = 0; i < potentials.length; i += blocksize) {
       const subtotal = sum(potentials.slice(i, i + blocksize))
-      if (subtotal === 0) throw new Error('Cannot set the potentials for the distribution.  The probabilities are undefined for some combinations of the parent varaibles')
+      if (subtotal === 0) throw new Error('Cannot set the potentials for the distribution.  The probabilities are undefined for some combinations of the parent varaibles.')
       total += subtotal
     }
     this._potentialFunction = potentials.map(p => p / total)
@@ -263,9 +263,9 @@ export class Distribution {
    */
   addHeadVariable (name: string, levels: string[]) {
     const Idx = this._variableNames.indexOf(name)
-    if (Idx > 0) throw new Error(`Cannot add variable ${name}.  A variable with that name already exists`)
+    if (Idx > 0) throw new Error(`Cannot add variable ${name}.  A variable with that name already exists.`)
     const distinctLevels = uniq(levels)
-    if (distinctLevels.length === 0) throw new Error(`Cannot add variable ${name}.  It has no levels`)
+    if (distinctLevels.length === 0) throw new Error(`Cannot add variable ${name}.  It has no levels.`)
 
     const variableNames = [...this._variableNames.slice(0, this._numberOfHeadVariables), name, ...this._variableNames.slice(this._numberOfHeadVariables)]
     const variableLevels = [...this._variableLevels.slice(0, this._numberOfHeadVariables), levels, ...this._variableLevels.slice(this._numberOfHeadVariables)]
@@ -298,9 +298,9 @@ export class Distribution {
    */
   addParentVariable (name: string, levels: string[]) {
     const Idx = this._variableNames.indexOf(name)
-    if (Idx > 0) throw new Error(`Cannot add variable ${name}.  A variable with that name already exists`)
+    if (Idx > 0) throw new Error(`Cannot add variable ${name}.  A variable with that name already exists.`)
     const distinctLevels = uniq(levels)
-    if (distinctLevels.length === 0) throw new Error(`Cannot add variable ${name}.  It has no levels`)
+    if (distinctLevels.length === 0) throw new Error(`Cannot add variable ${name}.  It has no levels.`)
 
     const variableNames = [...this._variableNames, name]
     const variableLevels = [...this._variableLevels, levels]
@@ -331,9 +331,9 @@ export class Distribution {
    */
   addLevel (name: string, level: string) {
     const Idx = this._variableNames.indexOf(name)
-    if (Idx < 0) throw new Error(`Cannot add level ${level} to variable ${name}.  A variable with that name does not exist`)
+    if (Idx < 0) throw new Error(`Cannot add level ${level} to variable ${name}.  A variable with that name does not exist.`)
     const levelIdx = this._variableLevels[Idx].indexOf(level)
-    if (levelIdx > 0) throw new Error(`Cannot add level ${level} to variable ${name}.  That level already exists`)
+    if (levelIdx > 0) throw new Error(`Cannot add level ${level} to variable ${name}.  That level already exists.`)
 
     const variableLevels = [...this._variableLevels]
     variableLevels[Idx] = [...this._variableLevels[Idx], level]
@@ -371,11 +371,11 @@ export class Distribution {
     const headVariableNames = Object.keys(event)
     const parentVariableNames = Object.keys(evidence || {})
 
-    if (headVariableNames.some(x => this._variableNames.indexOf(x) >= this._numberOfHeadVariables)) throw new Error('Cannot infer probability.   The event contains evidence for one or more parent variables')
+    if (headVariableNames.some(x => this._variableNames.indexOf(x) >= this._numberOfHeadVariables)) throw new Error('Cannot infer probability.   The event contains evidence for one or more parent variables.')
     if (parentVariableNames.some(x => {
       const idx = this._variableNames.indexOf(x)
       return idx >= 0 && idx < this._numberOfHeadVariables
-    })) throw new Error('Cannot infer probability.   The evidence contains events for one or more head variables')
+    })) throw new Error('Cannot infer probability.   The evidence contains events for one or more head variables.')
 
     const validHeadVariableNames = uniq(headVariableNames.filter(x => this.hasHeadVariable(x)))
     const validParentVariableNames = uniq(parentVariableNames.filter(x => this.hasParentVariable(x)))
@@ -395,7 +395,7 @@ export class Distribution {
     // provided for any of the parent variables, then the probability will be undefined.
     // Throw an error to alert the caller of the ill formed request.
     if (levels.slice(0, this._numberOfHeadVariables).some(x => x.length === 0)) return 0
-    if (levels.some(x => x.length === 0)) throw new Error('Cannot infer probability.  The evidence for each parent must contain at least one valid level')
+    if (levels.some(x => x.length === 0)) throw new Error('Cannot infer probability.  The evidence for each parent must contain at least one valid level.')
     // All is good.   Compute the joint probability conditioned upon the
     // evidence.
     const numberOfLevels: number[] = this._variableLevels.map((x) => x.length)
@@ -474,7 +474,7 @@ export class Distribution {
 // This function is designed to support legacy ICPT interface for
 // specifying a probability distribution.
 export function fromCPT (name: string, parentNames: string[], levels: string[][], cpt: ICptWithParents | ICptWithoutParents) {
-  const throwErr = (reason: string) => { throw new Error(`Cannot create conditional distribution for variable ${name}.  ${reason}`) }
+  const throwErr = (reason: string) => { throw new Error(`Cannot create conditional distribution for variable ${name}.  ${reason}.`) }
   if (Array.isArray(cpt)) {
     if (parentNames.length === 0) throwErr('It has no parent variables')
     if (!levels[0] || levels[0].length === 0) throwErr(`${name} has no levels`)
@@ -492,16 +492,16 @@ export function fromCPT (name: string, parentNames: string[], levels: string[][]
     cpt.forEach((row, rowidx) => {
       // Construct the combination for each of thenetries in the row.
       const parentCombo: number[] = parentNames.map((pname, i) => {
-        if (!row.when || !row.when[pname]) throwErr(`Row ${rowidx} does not have an entry for parent variable ${pname}.`)
+        if (!row.when || !row.when[pname]) throwErr(`Row ${rowidx} does not have an entry for parent variable ${pname}`)
         const lvl = row.when[pname]
         const lvlidx = parentLevels[i].indexOf(lvl)
-        if (lvlidx < 0) throwErr(`${lvl} is not a valid level.`)
+        if (lvlidx < 0) throwErr(`${lvl} is not a valid level`)
         return lvlidx
       })
 
       headLevels.forEach((level, i) => {
         const idx = combinationToIndex([i, ...parentCombo], numberOfLevels)
-        if (!row.then || row.then[level] == null) throwErr(`Row ${rowidx} is missing an entry for the level ${level} of the head variable.`)
+        if (!row.then || row.then[level] == null) throwErr(`Row ${rowidx} is missing an entry for the level ${level} of the head variable`)
         const p = row.then[level]
         result[idx] = p
         total += row.then[level]
@@ -516,13 +516,13 @@ export function fromCPT (name: string, parentNames: string[], levels: string[][]
     const potentialFunction = Array(headLevels.length).fill(0)
     let total = 0
     Object.entries(cpt).forEach(([k, v]) => {
-      if (v < 0) throwErr(`The probability for ${k} is less than zero.`)
+      if (v < 0) throwErr(`The probability for ${k} is less than zero`)
       total += v
       const lvlIdx = headLevels.indexOf(k)
       if (lvlIdx < 0) throwErr(`${k} is not a valid level`)
       potentialFunction[headLevels.indexOf(k)] += v
     })
-    if (total < 0) throwErr('At least one level must have a non-zero liklihood.')
+    if (total < 0) throwErr('At least one level must have a non-zero probability')
     potentialFunction.forEach((p, i) => { potentialFunction[i] = p / total })
     return new Distribution([v], [], potentialFunction)
   }

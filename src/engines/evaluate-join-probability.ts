@@ -298,7 +298,7 @@ export const evaluateFormula = (formulaId: number, nodes: FastNode[], formulas: 
       }
       case FormulaType.EVIDENCE_FUNCTION:
       case FormulaType.UNIT:
-      case FormulaType.NODE_POTENTIAL: throw new Error('Cannot infer the probability of the given event.   Unexpected formula type.')
+      case FormulaType.NODE_POTENTIAL: throw new Error('Cannot infer the probability of the given event.  Unexpected formula type.')
     }
   }
 }

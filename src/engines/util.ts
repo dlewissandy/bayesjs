@@ -245,7 +245,7 @@ export const upsertFormula = (formulas: Formula[], formulaLookup: { [name: strin
       } else {
         // there is no function at the specified index.   This should never happen that
         // we have a null reference!
-        throw new Error(`Null reference to formula ${formula.id}`)
+        throw new Error(`Null reference to formula ${formula.id}.`)
       }
     }
   }

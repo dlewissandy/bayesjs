@@ -294,7 +294,7 @@ export function getRandomSample (
   // Basic sanity checks
   if (sampleSize < 0) {
     throw new Error(
-      'Cannot generate random sample.   Sample size must be greater than zero.',
+      'Cannot generate random sample.  Sample size must be greater than zero.',
     )
   }
   if (sampleSize === 0) return []

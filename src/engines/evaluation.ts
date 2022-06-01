@@ -293,7 +293,7 @@ export const evaluate = (formulaId: FormulaId, nodes: FastNode[], formulas: Form
       case FormulaType.UNIT:
         // Note, there is only one implementation of the unit potential function.
         return []
-      case FormulaType.NODE_POTENTIAL: throw new Error(`The node potential function for node ${nodes[formulaId].name} was not provided`)
+      case FormulaType.NODE_POTENTIAL: throw new Error(`The node potential function for node ${nodes[formulaId].name} was not provided.`)
     }
   }
 }
