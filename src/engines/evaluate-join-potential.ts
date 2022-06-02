@@ -9,8 +9,8 @@ import { sum } from 'ramda'
 /** Construct the join of an arbitrary collection of variables in a Bayesian Network,
  * conditioned on an optional set of parent variables.  Returns the potential function
  * of the joint distribution over the head and parent variables subject to any evidence.
- * @param nodes: The collection of nodes in the bayesian network
- * @param cliques: The collection of cliques in the junction tree for the bayesian
+ * @param nodes: The collection of nodes in the Bayesian network
+ * @param cliques: The collection of cliques in the junction tree for the Bayesian
  *   network.
  * @param formulas: The collection of formulas for computing the posterior
  *   distributions for the cliques, nodes and separators  of the Bayes Network, and
@@ -20,7 +20,7 @@ import { sum } from 'ramda'
  * @param headVariables: The indices of the variables that occur as head variables of
  *   the joint distribution being constructed.  These indices must be valid references
  *   to variables in the network.
- * @param parentVariables: The idices of the variables that occur as parent variables
+ * @param parentVariables: The indices of the variables that occur as parent variables
  *   of the joint distribution being constructed.   These indices must be valid
  *   references for the variables in the network, and must be distinct from the
  *   head variables of the joint being constructed.
@@ -49,7 +49,7 @@ export function evaluateJoinPotentials (nodes: FastNode[], cliques: FastClique[]
   const joinFormula = amendedFormulas[joinFormulaId]
   const joinDomain = [...headVariables, ...parentVariables]
 
-  // if any new potentials were computed, then update the cache.
+  // If any new potentials were computed, then update the cache.
   amendedPotentials.slice(0, potentials.length).forEach((ps, i) => {
     if (potentials[i] == null) potentials[i] = ps
   })

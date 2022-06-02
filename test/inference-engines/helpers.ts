@@ -71,7 +71,7 @@ function makeTestCases (names: string[], testValues: string[][][], goldStandard:
     const event: Record<string, string[]> = {}
     const evidenceAndEvent: Record<string, string[]> = {}
     const evidence: Record<string, string[]> = {}
-    // for each variable pick a value and a location in either the
+    // For each variable pick a value and a location in either the
     // evidence or event.
     while (varIdx < testValues.length) {
       const location = x % 3

@@ -148,8 +148,8 @@ function collectCliquesEvidence (cliques: FastClique[], separators: number[][], 
  * conditioned on an optional set of parent variables.   This is performed by a
  * modified symbolic message passing strategy, whereby variables that appear in the
  * join are not marginlized out of the messages passed between cliques.
- * @param nodes: The collection of nodes in the bayesian network
- * @param cliques: The collection of cliques in the junction tree for the bayesian
+ * @param nodes: The collection of nodes in the Bayesian network
+ * @param cliques: The collection of cliques in the junction tree for the Bayesian
  *   network.
  * @param formulas: The collection of formulas for computing the posterior
  *   distributions for the cliques, nodes and separators  of the Bayes Network, and
@@ -224,7 +224,7 @@ export function propagateJoinMessages (nodes: FastNode[], cliques: FastClique[],
     // consistent.
     collectCliquesEvidence(cliques, separators, messages, upsert, amendedFormulas, theseVariables, rootClique.id)
     const messagesReceived: Formula[][] = rootClique.neighbors.map(x => messages[messageName(x, rootClique.id)] || [])
-    // after receiving the messages, we need to multiply them together with the root clique's
+    // After receiving the messages, we need to multiply them together with the root clique's
     // prior distribution.   This may already be a formula, so we use the upsert to avoid
     // creating a duplicate.
     const cliqueFormula = upsert(mult([
