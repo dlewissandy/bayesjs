@@ -76,7 +76,21 @@ export function setDistribution (distribution: Distribution, nodes: FastNode[], 
   const innerNumberOfLevels = innerDomain.map(i => numberOfLevels[i])
   const size = product(numberOfLevels)
 
-  potentials[node.id] = evaluateMarginalPure(innerPotential, innerDomain, innerNumberOfLevels, domain, numberOfLevels, size)
+  const result = evaluateMarginalPure(innerPotential, innerDomain, innerNumberOfLevels, domain, numberOfLevels, size)
+  if (domain.length > 1) {
+    // normalize the blocks of the potential
+    const [blocksize] = numberOfLevels
+    const numberOfBlocks = Math.floor(result.length / blocksize)
+    for (let blockIdx = 0; blockIdx < numberOfBlocks; blockIdx++) {
+      const total = sum(result.slice(blockIdx * blocksize, (blockIdx + 1) * blocksize))
+      if (total !== 0) {
+        for (let j = blockIdx * blocksize; j < (blockIdx + 1) * blocksize; j++) result[j] = result[j] / total
+      }
+    }
+    potentials[node.id] = result
+  } else {
+    potentials[node.id] = result
+  }
   return node.id
 }
 
@@ -399,7 +413,6 @@ export function initializePriorNodePotentials (network: {[name: string]: {
     const levels = [node.levels, ...node.parents.map(x => fastNodes[x].levels)]
     if (network[node.name].cpt) {
       const dist = fromCPT(node.name, parentNames, levels, network[node.name].cpt as ICptWithParents | ICptWithoutParents)
-      // console.warn('The use of ICptWithParents or ICptWithoutParents is deprecated and will be removed in a future version.   Replace with Distribution objects to avoid this warning.')
       setDistribution(dist, fastNodes, potentials)
       return
     }
@@ -511,4 +524,36 @@ export function restoreEngine (engine: InferenceEngine, localPotentials: (FastPo
 export function normalize (potentials: FastPotential) {
   const total = sum(potentials)
   return potentials.map(p => p / total)
+}
+
+/**
+ * Choose a clique from which to begin a traversal of the junction forest.
+ * The clique will be chosen by the following criteria: 1) the clique contains
+ * the largest number of variables from the joinDomain, 2) if a tie exists, then
+ * choose the clique with the smallest size, 3) if a tie exists, choose the clique
+ * with the fewest neighbors, 4) if a tie still exists, pick the clique with the
+ * smaller id.
+ * @param cliques A list of all of the cliques in the junction forest
+ * @param joinDomain A list of variables in the bayes network.   This function
+ *   assumes that these variables occur in one or more of the cliques.   This
+ *   precondition must be ensured by the caller.
+ * @param formulas The forumlas resulting from symbolic message passing for the
+ *   inference engine.   These are used for computing the size of the cliques.
+ */
+export function pickRootClique (cliques: FastClique[], joinDomain: number[], formulas: Formula[]): FastClique {
+  const sortedCliques = [...cliques].sort((a, b) => {
+    // Pick the one that has more of the result nodes in its domain
+    const [membersA, membersB] = [a, b].map(x => x.domain.filter(id => joinDomain.includes(id)).length)
+    if (membersA !== membersB) return membersB - membersA
+    // If they have the same number of results in their domain, pick the one with the smallest size
+    const [sizeA, sizeB] = [a, b].map(x => formulas[x.posterior].size)
+    if (sizeA !== sizeB) return sizeA - sizeB
+    // If they have the same size domain, pick the one with the fewest neighbors
+    const [neighborsA, neighborsB] = [a, b].map(x => x.neighbors.length)
+    if (sizeA !== sizeB) return neighborsA - neighborsB
+    // Of those, pick the one with the smaller id.
+    const [idA, idB] = [a, b].map(x => x.id)
+    return idA - idB
+  })
+  return sortedCliques[0]
 }

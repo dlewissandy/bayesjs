@@ -8,13 +8,14 @@ import roundTo = require('round-to')
 import { FastPotential, indexToCombination } from './FastPotential'
 import { FastClique } from './FastClique'
 import { FastNode } from './FastNode'
-import { NodeId, CliqueId, FormulaId } from './common'
+import { NodeId, FormulaId, FastEvent } from './common'
 import { Formula, EvidenceFunction, updateReferences } from './Formula'
 import { propagatePotentials } from './symbolic-propagation'
 import { evaluate } from './evaluation'
-import { getNetworkInfo, initializeCliques, initializeEvidence, initializeNodeParents, initializeNodes, initializePosteriorCliquePotentials, initializePosteriorNodePotentials, initializePriorNodePotentials, initializeSeparatorPotentials, NetworkInfo, upsertFormula, setDistribution } from './util'
+import { getNetworkInfo, initializeCliques, initializeEvidence, initializeNodeParents, initializeNodes, initializePosteriorCliquePotentials, initializePosteriorNodePotentials, initializePriorNodePotentials, initializeSeparatorPotentials, NetworkInfo, upsertFormula, setDistribution, pickRootClique } from './util'
 import { Distribution } from './Distribution'
-import { arbitraryJoin, inferArbitraryJointProbability } from './arbitrary-join'
+import { evaluateJoinPotentials } from './evaluate-join-potential'
+import { inferJoinProbability } from './evaluate-join-probability'
 import { getRandomSample } from './random-sample'
 
 /** This inference engine uses a modified version of the lazy cautious message
@@ -134,13 +135,23 @@ export class LazyPropagationEngine implements IInferenceEngine {
   getDistribution = (name: string) =>
     this.getJointDistribution([name], this._nodes.find(x => x.name === name)?.parents.map(i => this._nodes[i].name) || [])
 
+  /**
+   * Compute the joint distribution for a collection of variables, optionally conditioned upon
+   * a collection of parent variables.   This algorithm uses a mondified symbolic message passing
+   * scheme to reuse as many of the previously computed potentials as possible..
+   * @param headVariables A non-empty list of variables in the join
+   * @param parentVariables A possibly empty list of parent variables.   The parent and head
+   *   variables must be disjoint.
+   * @returns a new distribution object with the requested conditioned joint distribution.
+   * @throws This function throws if either the head or parent variables are not distinct, or if they contain
+   *   repeated elements or elements that are not variables of the Bayes network.   Also
+   *   throws when the parent and head variables are not disjoint.
+   */
   getJointDistribution = (headVariables: string[], parentVariables: string[]): Distribution => {
     const parentIdxs: number[] = parentVariables.map(s => this._nodes.findIndex(node => node.name === s))
     const headIdxs: number[] = headVariables.map(s => this._nodes.findIndex(node => node.name === s))
-    this._formulas.forEach(f => evaluate(f.id, this._nodes, this._formulas, this._potentials))
-    const potentialFunction = arbitraryJoin(this._nodes, this._cliques, this._formulas, this._potentials, this._separators, this._separatorPotentials, headIdxs, parentIdxs)
-    const dist = new Distribution(headVariables.map(n => this._nodes.find(x => x.name === n)) as FastNode[], parentVariables.map(n => this._nodes.find(x => x.name === n)) as FastNode[], potentialFunction)
-
+    const { potentials } = evaluateJoinPotentials(this._nodes, this._cliques, this._connectedComponents, this._separators, this._formulas, this._potentials, headIdxs, parentIdxs)
+    const dist = new Distribution(headIdxs.map(n => this._nodes[n]), parentIdxs.map(n => this._nodes[n]), potentials)
     return dist
   }
 
@@ -186,18 +197,44 @@ export class LazyPropagationEngine implements IInferenceEngine {
     return result
   }
 
-  // implementation of the updateEvidence interface function.
+  /**
+   * Update the evidence for the given variable, replacing the existing
+   * evidence for that variable with the new value.   Evidence for any other
+   * variables is left unchanged.
+   * @param nodeId the identifier for the node for which the evidence is
+   *   being updated
+   * @param levelIds The identifiers for the levels ove the variable which
+   *   are evidenced
+   * NOTE: This function assumes that the nodeId and levelIds are valid and
+   *    that the level identifiers are distinct.
+   *   These preconditions are not checked, and must be ensured by the caller.
+   */
+  private updateEvidencePrimitive = (nodeId: number, levelIds: number[]) => {
+    const node = this._nodes[nodeId]
+    const evidenceFunc = this._formulas[node.evidenceFunction] as EvidenceFunction
+    const newLevels = levelIds.sort()
+    if (!evidenceFunc.levels || evidenceFunc.levels.length !== newLevels.length || evidenceFunc.levels !== newLevels) {
+      evidenceFunc.levels = newLevels
+      this.clearCachedValues(evidenceFunc.id)
+    }
+  }
+
+  /**
+   * Update the evidence for the given variables, replacing the existing
+   * evidence for that variable with the new value.   Evidence for any other
+   * variables is left unchanged.
+   * @param evidence A maping from variables to evidenced values for the
+   *   variable.
+   */
   updateEvidence = (evidence: { [name: string]: string[]}) => {
     Object.keys(evidence).forEach(name => {
       const node = this._nodes.find(x => x.name === name)
       if (node) {
-        const evidenceFunc = this._formulas[node.evidenceFunction] as EvidenceFunction
-        const lvlIdxs: number[] = uniq(evidence[name].map(l => node.levels.indexOf(l))).sort()
+        const lvlIdxs: number[] = uniq(evidence[name].map(l => node.levels.indexOf(l)))
 
         if (lvlIdxs.length > 0 && lvlIdxs[0] === -1) throw new Error(`Cannot update the evidence.   One of levels provided for ${node.name} is not valid.`)
-        if (lvlIdxs.length > 0 && evidenceFunc.levels !== lvlIdxs) {
-          evidenceFunc.levels = lvlIdxs
-          this.clearCachedValues(evidenceFunc.id)
+        if (lvlIdxs.length > 0) {
+          this.updateEvidencePrimitive(node.id, uniq(lvlIdxs))
         }
       }
     })
@@ -246,52 +283,126 @@ export class LazyPropagationEngine implements IInferenceEngine {
     return levels.reduce((acc, level) => acc + p[level], 0)
   }
 
-  /** Given a collection of nodes and levels representing an event, construct the
-   * joint probability distribution distribution on the given nodes by creating a
-   * new potential function that "adds the fill in edges" between the cliques
-   * that contain the nodes.   This is expensive, and should be cached to avoid
-   * expensive recomputation.  This is left as future work.
+  /**
+   * Infer the probability of an event where all of the nodes appear in the given clique.
+   * @param clique A clique containing all the nodes in the event.   This precondition is not
+   *   checked, and must be verified by the caller
+   * @param event The event, consisting of a list of variable/level pairs representing the
+   *   possible values for the variable. When more than one possible values are provided
+   *   for a variable, the cumulative probability over the individual outcomes will be
+   *   computed.   When more than one outcome is provided for multiple variables, the
+   *   cumulative over all possible combinations of those outcomes will be computed.
+   * @returns The probability of the event.
+   * NOTE: This function assumes that the event does not contain more than one element for
+   *   each variable, that all the variables are in the clique, and that the levels are all
+   *   levels of the variable.   These preconditions are not checked, and must be ensured
+   *   by the caller.
    */
-  private inferFromJointDistribution (nodeIds: NodeId[], event: {[name: string]: string[]}): number {
-    const names = Object.keys(event)
-
-    const nodes = names.map(name => {
-      const node = this._nodes.find(node => node.name === name)
-      if (node === undefined) throw new Error(`Cannot infer probability.   Variable ${name} does not exist`)
-      return node
-    })
-
-    const values = nodes.map(node => {
-      const ns = event[node.name]
-      return ns.map(n => node.levels.indexOf(n)).filter(n => n >= 0)
-    })
-    if (values.some(vs => vs.length === 0)) return 0
-    return inferArbitraryJointProbability(this._nodes, this._cliques, this._formulas, this._potentials, this._separators, this._separatorPotentials, nodes.map(x => x.id), values)
-  }
-
-  /** Given a collection of nodes and levels representing an event, and a clique
-   * which contains all the given nodes, compute the joint probability of the event
-   * by totalizing all the corresponding rows in the cliques posterior marginal
-   * potential function.
-   */
-  private inferFromClique (nodeIds: NodeId[], levels: number[][], cliqueId: CliqueId) {
-    const clique = this._cliques[cliqueId]
+  private inferFromClique (clique: FastClique, event: { nodeId: number; levels: number[]}[]): number {
     const formulaId = clique.posterior
     const formula = this._formulas[formulaId]
-    const idxs = nodeIds.map(id => formula.domain.findIndex(x => x === id))
+    const nodePositions = event.map(({ nodeId }) => formula.domain.indexOf(nodeId))
     const potential = evaluate(formulaId, this._nodes, this._formulas, this._potentials)
     let total = 0
     potential.forEach((p, i) => {
       const combos = indexToCombination(i, formula.numberOfLevels)
-      if (idxs.every((idx, j) => levels[j].includes(combos[idx]))) total += p
+      if (nodePositions.every((nodePosition, j) => event[j].levels.includes(combos[nodePosition]))) total += p
     })
     return total
   }
 
-  // Implementation of the infer interface function.  This function
-  // lazily evaluates the requested potential.  If more than one value
-  // is provided for the event, then the cumulative probability over
-  // the provided levels is returned.
+  /** Given a collection of nodes and levels representing an event, construct the
+   * joint probability distribution distribution on the given nodes by creating a
+   * new potential function that "adds the fill in edges" between the cliques
+   * that contain the nodes.
+   * @param - the event for which we wish to infer the probability.
+   * NOTE: This algorithm only works when there is no evidence baked into the
+   * network.  When this is the case, the evidence must be retracted and then
+   * restored afterward.
+   */
+  private inferFromJointPropagation (event: FastEvent[]): number {
+    /**
+     * This helper function converts the fast event into a join domain
+     * and a collection of values for each of the variables in the join
+     * @param event
+     */
+    const refactorEvent = (event: FastEvent[]): { joinDomain: number[]; values: (number[]|null)[] } => {
+      const joinDomain = event.map(({ nodeId }) => nodeId)
+      const values = this._nodes.map(node => {
+        const e = event.find(entry => entry.nodeId === node.id)
+        return e?.levels ?? null
+      })
+      return { joinDomain, values }
+    }
+
+    // get the initial evidence.   If there is evidence it will need to be
+    // retracted and restored.
+    const initialEvidence = this.getAllEvidence()
+    if (Object.keys(initialEvidence).length === 0) {
+      // in the case where there is no evidence, we can simply compute it with the
+      // special purpose message passing algorithm
+      const { joinDomain, values } = refactorEvent(event)
+      const { joinProbability } = inferJoinProbability(this._nodes, this._cliques, this._connectedComponents, this._separators, this._formulas, this._potentials, joinDomain, values)
+      return joinProbability
+    } else {
+      // Since evidence has been provided for the network, we are really computing
+      // a joint probability distribution conditioned upon some arbitrary collection
+      // of parents.   if X is the event, and Y is the evidence, we can use the equality
+      // P(X,Y) = P(X|Y)P(Y) to compute that conditional.  This requies us to compute
+      // to joins, one over the parents and one over the union of the event and parents.
+      // all of this must be done without any evidence baked into the network.
+
+      // We start by caching the initial potentials with the baked in evidence, so that
+      // they can be restored at the end.
+      const initialPotentials = [...this._potentials]
+
+      // construct a fast event that represents the evidence for the parents.
+      const evidenceAsEvent: FastEvent[] = []
+      const eventDomain: number[] = event.map(x => x.nodeId)
+      this._nodes.forEach(node => {
+        const e: EvidenceFunction = this._formulas[node.evidenceFunction] as EvidenceFunction
+        if (e.levels && e.levels.length > 0) evidenceAsEvent.push({ nodeId: e.nodeId, levels: e.levels })
+      })
+      this.removeAllEvidence()
+
+      // Since all the work to ensure that the event does not contain
+      // values in conflict with the evidence, we can infer the probability of
+      // we can use Bayes theorem to compute the joint joint probability by
+      // calling inferJoint twice; once with the join over the event and
+      // evidence, and once for the join over just the evidence (parents).
+      // From the ratio of these two values we get the requested conditional
+      // probability.
+      const joinEvent = event.concat(evidenceAsEvent.filter(e => !eventDomain.includes(e.nodeId)))
+      const { joinDomain, values: joinValues } = refactorEvent(joinEvent)
+      const { joinProbability } = inferJoinProbability(this._nodes, this._cliques, this._connectedComponents, this._separators, this._formulas, this._potentials, joinDomain, joinValues)
+      const { joinDomain: parentDomain, values: parentValues } = refactorEvent(evidenceAsEvent)
+      const { joinProbability: parentProbability } = inferJoinProbability(this._nodes, this._cliques, this._connectedComponents, this._separators, this._formulas, this._potentials, parentDomain, parentValues)
+      const result = joinProbability === 0 ? 0 : joinProbability / parentProbability
+
+      // finally we restore the evidence and potentials to the original values.
+      this.setEvidence(initialEvidence)
+      this._potentials = initialPotentials
+      return result
+    }
+  }
+
+  /**
+   * Infer the probability of an event subject to the currently
+   * provided evidence.
+   * @param event The event, consisting of a mapping from variable
+   *   names to possible values.   When more than one possible value
+   *   is provided for a variable, the cumulative probability over the
+   *   individual outcomes will be computed.   When more than one
+   *   outcome is provided for multiple variables, the cumulative over
+   *   all possible combinations of those outcomes will be computed.
+   * @returns The probability of the event.   When the event contains
+   *   variables that are not part of the network, or when a level for a
+   *   variable is provided which is not a level of that variable, or
+   *   if the provided levels are contradictory to the provided
+   *   evidence for the variable, then this function will return 0.
+   *   If the event contains no mappings from variable to level, this
+   *   function will return unity.
+   * */
   infer = (event: { [name: string]: string[]}) => {
     const names = Object.keys(event)
     // If the empty event has been provided, then the probability is
@@ -300,19 +411,25 @@ export class LazyPropagationEngine implements IInferenceEngine {
 
     // If some names have been provided, then we need to find out
     // which nodes they belong to.
-    const idxs = names.map(name => this._nodes.findIndex(node => node.name === name))
+    const joinDomain = names.map(name => this._nodes.findIndex(node => node.name === name))
 
     // If there are some names that were provided that do not belong to
     // any nodes, then the probability of the event is 0.
-    if (idxs.some(idx => idx === -1)) return 0
+    if (joinDomain.some(nodeId => nodeId === -1)) return 0
 
     // If we reached here, all the names are actually variables/nodes in the
     // Bayes network.   We need to check that all the provided levels are
     // valid outcomes for each variable.
     const levels: number[][] = names.map((name, i) => {
       const lvls = event[name] || []
-      const node = this._nodes[idxs[i]]
-      return uniq(lvls.map(x => node.levels.indexOf(x)).filter(x => x >= 0))
+      const node = this._nodes[joinDomain[i]]
+      // ensure that the levels are distinct and that they are levels of the
+      // variable.
+      const uniqueValidLevels = uniq(lvls.map(x => node.levels.indexOf(x)).filter(x => x >= 0))
+      // ensure that the levels are not contradictory to the provided
+      // evidence
+      const evidence = this._formulas[node.evidenceFunction] as EvidenceFunction
+      return uniqueValidLevels.filter(x => evidence.levels ? evidence.levels.includes(x) : true)
     })
 
     // In the case where any of the levels that were provided are not valid
@@ -323,19 +440,19 @@ export class LazyPropagationEngine implements IInferenceEngine {
     // If we reached here, then all the names and levels are valid.
     // If only one name has been provided, then we are tasked with inferring
     // the marginal probability for the event.
-    if (idxs.length === 1) return this.inferFromMarginal(idxs[0], levels[0])
+    if (joinDomain.length === 1) return this.inferFromMarginal(joinDomain[0], levels[0])
 
-    // Otherwise, we are being tasked with finding the joint probability
-    // distribution of the event.   In the case where all the variables
-    // are in the same clique, then this can be done with the information
-    // that already exists in the junction tree.
-    const cs = this._cliques.filter(clique => idxs.every(idx => clique.domain.includes(idx))).sort((a, b) => a.domain.length - b.domain.length)
-    if (cs.length > 0) return this.inferFromClique(idxs, levels, cs[0].id)
+    // If all the nodes are in the same clique, then we can efficiently
+    // infer the probability from the posterior clique potential.
+    const clique = pickRootClique(this._cliques, joinDomain, this._formulas)
+    const fastEvent = joinDomain.map((nodeId, i) => ({ nodeId, levels: levels[i] }))
+    if (joinDomain.every(i => clique.domain.includes(i))) {
+      return this.inferFromClique(clique, fastEvent)
+    }
 
-    // Otherwise, we must construct the joint probability distribution
-    // by forcing all the variables into a single clique.
-    // This is left for future work
-    return this.inferFromJointDistribution(idxs, event)
+    // Otherwise, we are being tasked with finding a joint probability that
+    // spans multiple cliques.
+    return this.inferFromJointPropagation(fastEvent)
   }
 
   inferAll = (options?: IInferAllOptions) => {
