@@ -557,3 +557,27 @@ export function pickRootClique (cliques: FastClique[], joinDomain: number[], for
   })
   return sortedCliques[0]
 }
+
+/**
+ * Perform summation with compensation to compute the total of a list of
+ * numeric values while minimizing floating point error.
+ * @param list - The list of values to sum
+ */
+export function kahanSum (list: number[]): number {
+  // initialize the accumulator and the compensation
+  let total = 0
+  let carry = 0
+  for (let i = 0; i < list.length; i++) {
+    // Compute the compensated value to add to the total
+    const y = list[i] - carry
+    // Add the compensated value, however the low order digits
+    // of y will be lost
+    const t = total + y
+    // Recover the low order digits that were lost.  Note that
+    // the parenthesis are important and cannot be removed without
+    // changing the result.
+    carry = (t - total) - y
+    total = t
+  }
+  return total
+}
