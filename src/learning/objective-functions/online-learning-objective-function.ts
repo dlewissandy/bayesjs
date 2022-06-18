@@ -1,5 +1,5 @@
 import { InferenceEngine, FastPotential } from '../..'
-import { parentIndex } from '../../engines/util'
+import { parentIndex, kahanSum } from '../../engines/util'
 import { GroupedEvidence, sampleBasedAverages } from '../Observation'
 import { approximateHessian, norm2, ascentDirection, LagrangianMultipliers } from '../vector-utils'
 import { chiSqrDistance, logLikelihood, localDistributionPotentials } from './util'
@@ -32,7 +32,7 @@ export function objectiveFunction (groups: GroupedEvidence[], priors: FastPotent
     // Perform the probabilistic inferences using the engine.
     const ll = logLikelihood(engine, groups)
     const sampleAvgs = sampleBasedAverages(engine, groups)
-    const distance = priors.reduce((acc, ps, i) => acc + chiSqrDistance(ps, currentParams[i], sampleAvgs[i].parents, numbersOfHeadLevels[i]), 0)
+    const distance = kahanSum(priors.map((ps, i) => chiSqrDistance(ps, currentParams[i], sampleAvgs[i].parents, numbersOfHeadLevels[i])))
 
     // compute the various components of the tower of derivatives.
     const value = learningRate * ll - distance
@@ -79,11 +79,9 @@ export function objectiveFunction (groups: GroupedEvidence[], priors: FastPotent
     // The directional derivative is the dot product of the gradient
     // and the ascent direction.   If the step size is small enough,
     // the directional derivative should positive.
-    const directionalDerivative = adjustedGradient.reduce((total, gs, i) =>
-      total + gs.reduce((subtotal, g, jk) =>
-        subtotal + g * direction[i][jk],
-      )
-    , 0)
+    const directionalDerivative = kahanSum(adjustedGradient.map((gs, i) =>
+      kahanSum(gs.map((g, jk) => g * direction[i][jk])),
+    ))
 
     const result = {
       xs: currentParams,

@@ -8,6 +8,7 @@ import {
   INetwork,
   INode,
 } from '../types'
+import { kahanSum } from '../engines/util'
 
 function buildFactor (node: INode, giving?: ICombinations): IFactor {
   const factor = []
@@ -123,7 +124,7 @@ function eliminateVariable (factor: IFactor, variable: string): IFactor {
 }
 
 function normalizeFactor (factor: IFactor): IFactor {
-  const total = factor.reduce((acc, row) => acc + row.value, 0)
+  const total = kahanSum(factor.map((row) => row.value))
 
   if (total === 0) {
     return factor

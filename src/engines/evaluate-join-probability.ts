@@ -1,10 +1,11 @@
 import { FastPotential, indexToCombination } from './FastPotential'
 import { FastClique } from './FastClique'
 import { Formula, FormulaType, Product, Marginal, Reference, NodePotential } from './Formula'
-import { sum, intersection, product, union } from 'ramda'
+import { intersection, product, union } from 'ramda'
 import { evaluateMarginalPure, evaluateProductPure, evaluate } from './evaluation'
 import { FastNode } from './FastNode'
 import { propagateJoinMessages } from './join-propagation'
+import { kahanSum } from './util'
 
 /** This is a special case algorithm for computing a joint probability when there
  * is no evidence.   This algorithm relies upon a formula evaluation method that
@@ -47,7 +48,7 @@ export function inferJoinProbability (nodes: FastNode[], cliques: FastClique[], 
   })
   // finally, return the result of the join and the supplementary information
   return {
-    joinProbability: sum(joinPotentials),
+    joinProbability: kahanSum(joinPotentials),
     supplementalFormulas,
     supplementalPotentials,
   }

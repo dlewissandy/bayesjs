@@ -12,7 +12,7 @@ import { NodeId, FormulaId, FastEvent } from './common'
 import { Formula, EvidenceFunction, updateReferences } from './Formula'
 import { propagatePotentials } from './symbolic-propagation'
 import { evaluate } from './evaluation'
-import { getNetworkInfo, initializeCliques, initializeEvidence, initializeNodeParents, initializeNodes, initializePosteriorCliquePotentials, initializePosteriorNodePotentials, initializePriorNodePotentials, initializeSeparatorPotentials, NetworkInfo, upsertFormula, setDistribution, pickRootClique } from './util'
+import { getNetworkInfo, initializeCliques, initializeEvidence, initializeNodeParents, initializeNodes, initializePosteriorCliquePotentials, initializePosteriorNodePotentials, initializePriorNodePotentials, initializeSeparatorPotentials, NetworkInfo, upsertFormula, setDistribution, pickRootClique, kahanSum } from './util'
 import { Distribution } from './Distribution'
 import { evaluateJoinPotentials } from './evaluate-join-potential'
 import { inferJoinProbability } from './evaluate-join-probability'
@@ -280,7 +280,7 @@ export class LazyPropagationEngine implements IInferenceEngine {
    */
   private inferFromMarginal (nodeId: NodeId, levels: number[]): number {
     const p = evaluate(this._nodes[nodeId].posteriorMarginal, this._nodes, this._formulas, this._potentials)
-    return levels.reduce((acc, level) => acc + p[level], 0)
+    return kahanSum(levels.map((level) => p[level]))
   }
 
   /**

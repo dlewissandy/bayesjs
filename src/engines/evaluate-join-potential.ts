@@ -4,7 +4,7 @@ import { evaluate, evaluateMarginalPure } from './evaluation'
 import { FastClique } from './FastClique'
 import { Formula } from './Formula'
 import { FastPotential } from './FastPotential'
-import { sum } from 'ramda'
+import { kahanSum } from './util'
 
 /** Construct the join of an arbitrary collection of variables in a Bayesian Network,
  * conditioned on an optional set of parent variables.  Returns the potential function
@@ -58,7 +58,7 @@ export function evaluateJoinPotentials (nodes: FastNode[], cliques: FastClique[]
   // that they sum to unity.
   let result: FastPotential = []
   if (joinFormula.domain.every((n, i) => n === joinDomain[i])) {
-    const total = sum(joinPotentials)
+    const total = kahanSum(joinPotentials)
     result = joinPotentials.map(p => total !== 0 ? p / total : p)
   } else {
     result = evaluateMarginalPure(joinPotentials, joinFormula.domain, joinFormula.domain.map(i => nodes[i].levels.length), joinDomain, joinDomain.map(i => nodes[i].levels.length), joinPotentials.length, true)

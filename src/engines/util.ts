@@ -8,7 +8,7 @@ import { IClique, ICliqueFactors, IGraph, INetwork, InferenceEngine } from '..'
 import { FastNode } from './FastNode'
 import { FastClique } from './FastClique'
 import { messageName } from './symbolic-propagation'
-import { reduce, product, sum } from 'ramda'
+import { reduce, product } from 'ramda'
 import { ICptWithParentsItem, ICptWithoutParents, ICptWithParents } from '../types'
 import { Distribution, fromCPT } from './Distribution'
 import { evaluateMarginalPure } from './evaluation'
@@ -19,6 +19,30 @@ export function commaSep (strings: string[]): string {
   if (strings.length === 1) return strings[0]
   if (strings.length === 2) return strings.join(' and ')
   return strings.slice(0, strings.length - 1).join(', ') + ' and ' + strings[strings.length - 1]
+}
+
+/**
+ * Perform summation with compensation to compute the total of a list of
+ * numeric values while minimizing floating point error.
+ * @param list - The list of values to sum
+ */
+export function kahanSum (list: number[]): number {
+  // initialize the accumulator and the compensation
+  let total = 0
+  let carry = 0
+  for (let i = 0; i < list.length; i++) {
+    // Compute the compensated value to add to the total
+    const y = list[i] - carry
+    // Add the compensated value, however the low order digits
+    // of y will be lost
+    const t = total + y
+    // Recover the low order digits that were lost.  Note that
+    // the parenthesis are important and cannot be removed without
+    // changing the result.
+    carry = (t - total) - y
+    total = t
+  }
+  return total
 }
 
 export function setDistribution (distribution: Distribution, nodes: FastNode[], potentials: (FastPotential|null)[]): NodeId {
@@ -82,7 +106,7 @@ export function setDistribution (distribution: Distribution, nodes: FastNode[], 
     const [blocksize] = numberOfLevels
     const numberOfBlocks = Math.floor(result.length / blocksize)
     for (let blockIdx = 0; blockIdx < numberOfBlocks; blockIdx++) {
-      const total = sum(result.slice(blockIdx * blocksize, (blockIdx + 1) * blocksize))
+      const total = kahanSum(result.slice(blockIdx * blocksize, (blockIdx + 1) * blocksize))
       if (total !== 0) {
         for (let j = blockIdx * blocksize; j < (blockIdx + 1) * blocksize; j++) result[j] = result[j] / total
       }
@@ -482,7 +506,7 @@ export function adjustZeroPotentials (potentials: FastPotential, numberOfHeadLev
   for (let idx = 0; idx < potentials.length; idx += numberOfHeadLevels) {
     const block: number[] = potentials.slice(idx, idx + numberOfHeadLevels)
     const mn = Math.min(...block)
-    const total = sum(block)
+    const total = kahanSum(block)
     if (mn <= 0) {
       block.forEach((x) => {
         result.push((x - mn + SQRTEPS) / (total + (SQRTEPS - mn) * numberOfHeadLevels))
@@ -522,7 +546,7 @@ export function restoreEngine (engine: InferenceEngine, localPotentials: (FastPo
  * potentials is zero.   The caller must guard against these conditions.
  */
 export function normalize (potentials: FastPotential) {
-  const total = sum(potentials)
+  const total = kahanSum(potentials)
   return potentials.map(p => p / total)
 }
 
@@ -556,28 +580,4 @@ export function pickRootClique (cliques: FastClique[], joinDomain: number[], for
     return idA - idB
   })
   return sortedCliques[0]
-}
-
-/**
- * Perform summation with compensation to compute the total of a list of
- * numeric values while minimizing floating point error.
- * @param list - The list of values to sum
- */
-export function kahanSum (list: number[]): number {
-  // initialize the accumulator and the compensation
-  let total = 0
-  let carry = 0
-  for (let i = 0; i < list.length; i++) {
-    // Compute the compensated value to add to the total
-    const y = list[i] - carry
-    // Add the compensated value, however the low order digits
-    // of y will be lost
-    const t = total + y
-    // Recover the low order digits that were lost.  Note that
-    // the parenthesis are important and cannot be removed without
-    // changing the result.
-    carry = (t - total) - y
-    total = t
-  }
-  return total
 }

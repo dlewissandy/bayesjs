@@ -1,8 +1,8 @@
 import { FastPotential, combinationToIndex, indexToCombination } from './FastPotential'
-import { product, uniq, sum, max } from 'ramda'
+import { product, uniq, max } from 'ramda'
 import { evaluateMarginalPure } from './evaluation'
 import { ICptWithParents, ICptWithoutParents } from '../types'
-import { commaSep } from './util'
+import { commaSep, kahanSum } from './util'
 
 /** A Distribution represents a joint distribution of one (trivially) or more
    * "head" variables, optionally conditioned upon one or more parent variables.
@@ -245,7 +245,7 @@ export class Distribution {
     const blocksize = product(numberOfLevels.slice(0, this._numberOfHeadVariables))
     let total = 0
     for (let i = 0; i < potentials.length; i += blocksize) {
-      const subtotal = sum(potentials.slice(i, i + blocksize))
+      const subtotal = kahanSum(potentials.slice(i, i + blocksize))
       if (subtotal === 0) throw new Error('Cannot set the potentials for the distribution.  The probabilities are undefined for some combinations of the parent varaibles')
       total += subtotal
     }
@@ -346,7 +346,7 @@ export class Distribution {
       const newIndex = combinationToIndex(oldCombos, newNumberOfLevels)
       potentialFunction[newIndex] = v
     })
-    const total = sum(potentialFunction)
+    const total = kahanSum(potentialFunction)
 
     this._variableLevels = variableLevels
     this._potentialFunction = potentialFunction.map(p => p / total)
