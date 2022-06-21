@@ -91,7 +91,7 @@ describe('inference on non-binary-distribution', () => {
     })
     it('infers the correct marginal for a  with 2 parents', () => {
       expect(toPrecision(engine.infer({ D: ['i'] }))).toEqual(0.2501)
-      expect(toPrecision(engine.infer({ D: ['j'] }))).toEqual(0.4327)
+      expect(toPrecision(engine.infer({ D: ['j'] }))).toEqual(0.4328)
       expect(toPrecision(engine.infer({ D: ['k'] }))).toEqual(0.3171)
     })
   })

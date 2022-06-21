@@ -1,5 +1,5 @@
 import { FastPotential } from '..'
-import { sum } from 'ramda'
+import { kahanSum } from '../engines/util'
 
 export const CUBEROOTEPS = Math.pow(Number.EPSILON, 1 / 3)
 export const SQRTEPS = Math.sqrt(Number.EPSILON)
@@ -11,7 +11,7 @@ export const SQRTEPS = Math.sqrt(Number.EPSILON)
  *    its parents.
  */
 export function norm2 (potentials: FastPotential[]): number {
-  return Math.sqrt(sum(potentials.map(ps => sum(ps.map(p => p * p)))))
+  return Math.sqrt(kahanSum(potentials.map(ps => kahanSum(ps.map(p => p * p)))))
 }
 
 /** Compute the condition number for a Hessian matrix.   Larger
@@ -111,8 +111,8 @@ export function LagrangianMultipliers (gradient: FastPotential[], hessian: FastP
     for (let jk = 0; jk < grad.length; jk += n) {
       const gslice = grad.slice(jk, jk + n)
       const hslice = hess.slice(jk, jk + n)
-      const numerator = gslice.reduce((acc, g, k) => acc + g * hslice[k], 0)
-      const denominator = sum(hslice)
+      const numerator = kahanSum(gslice.map((g, k) => g * hslice[k]))
+      const denominator = kahanSum(hslice)
       gs.push(numerator / denominator)
     }
     gammas.push(gs)

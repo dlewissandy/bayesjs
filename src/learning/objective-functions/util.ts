@@ -1,5 +1,5 @@
 import { FastPotential, InferenceEngine } from '../..'
-import { parentIndex, adjustZeroPotentials, removeFirstVariable } from '../../engines/util'
+import { parentIndex, adjustZeroPotentials, removeFirstVariable, kahanSum } from '../../engines/util'
 import { GroupedEvidence } from '../Observation'
 
 /** Compute the chi squared distance metric between a new best estimate of the
@@ -12,26 +12,24 @@ import { GroupedEvidence } from '../Observation'
  *   the parents.
  */
 export function chiSqrDistance (prior: FastPotential, currentBest: FastPotential, parentPotentials: FastPotential, numberOfHeadLevels: number): number {
-  return prior.reduce((acc, q, i) => {
+  return kahanSum(prior.map((q, i) => {
     const p = currentBest[i]
     const pa = parentPotentials[parentIndex(i, numberOfHeadLevels)]
-    return acc + pa * Math.pow(p - q, 2) / q
-  }, 0)
+    return pa * Math.pow(p - q, 2) / q
+  }))
 }
 
 /** Given an inference engine and a collection of grouped observations,
  * compute the estimated log likelihood of the priors given the data.
  */
 export function logLikelihood (engine: InferenceEngine, groups: GroupedEvidence[]): number {
-  return groups.reduce((acc: number, group) => {
+  return kahanSum(groups.map((group) => {
     const p = engine.infer(group.evidence)
     // if the probability is negative (as can occur when the step size
     // is too large)  we want to penalize the objective function.
     // We make the liklihood equal to machine epsilon in this case.
-    const e = group.frequency * Math.log(p < 0 ? Number.EPSILON : p)
-    return acc + e
-  }
-  , 0)
+    return group.frequency * Math.log(p < 0 ? Number.EPSILON : p)
+  }))
 }
 
 /** Given the name of a variable and the inference engine for a Bayesian

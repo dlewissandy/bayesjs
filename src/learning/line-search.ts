@@ -4,7 +4,7 @@ import { StepResult, StepStatus } from './StepResult'
 import { newtonStep } from './newton-step'
 import { ObjectiveFunction } from './objective-functions/ObjectiveFunction'
 import { SQRTEPS, CUBEROOTEPS } from './vector-utils'
-import { restoreEngine } from '../engines/util'
+import { restoreEngine, kahanSum } from '../engines/util'
 
 const ALPHA = CUBEROOTEPS
 const BETA = 0.9
@@ -85,7 +85,7 @@ export function lineSearch (engine: InferenceEngine, current: TowerOfDerivatives
   // the maximum step size allowed by the algorithm.   This is a first attempt at scaling the
   // step size based on the size of the network.   I am scaling it so that the max step size is a
   // multiple of the sum of the number of blocks in each conditional distribution
-  const MAXSTEPSIZE = 0.5 * current.xs.reduce((acc, ps, i) => acc + ps.length / numbersOfHeadLevels[i], 0)
+  const MAXSTEPSIZE = 0.5 * kahanSum(current.xs.map((ps, i) => ps.length / numbersOfHeadLevels[i]))
   const MAXLAMBDA = (current.ascentDirectionMagnitude > MAXSTEPSIZE) ? 1 : MAXSTEPSIZE / current.ascentDirectionMagnitude
   const MINLAMBDA = tolerance / relativeLength(current)
   const MAXITERATIONS = 100

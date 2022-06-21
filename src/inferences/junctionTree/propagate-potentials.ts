@@ -24,12 +24,12 @@ import {
   pipe,
   prop,
   reduce,
-  sum,
 } from 'ramda'
 import {
   buildCombinations,
   objectEqualsByFirstObjectKeys,
 } from '../../utils'
+import { kahanSum } from '../../engines/util'
 
 interface ICollectEvidenceOrder {
   id: string;
@@ -72,7 +72,7 @@ const createMessagesByCliques: (cliques: IClique[]) => ICliquePotentialMessages 
 export const marginalizePotentials = (network: INetwork, sepSet: string[], potentials: ICliquePotentialItem[]): ICliquePotentialItem[] =>
   reduce(
     (acc, cpt) => {
-      const then = sum(
+      const then = kahanSum(
         potentials
           .filter(potential => objectEqualsByFirstObjectKeys(cpt.when, potential.when))
           .map(prop('then')),
