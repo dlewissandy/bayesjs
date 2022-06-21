@@ -574,7 +574,7 @@ export function pickRootClique (cliques: FastClique[], joinDomain: number[], for
     if (sizeA !== sizeB) return sizeA - sizeB
     // If they have the same size domain, pick the one with the fewest neighbors
     const [neighborsA, neighborsB] = [a, b].map(x => x.neighbors.length)
-    if (sizeA !== sizeB) return neighborsA - neighborsB
+    if (neighborsA !== neighborsB) return neighborsA - neighborsB
     // Of those, pick the one with the smaller id.
     const [idA, idB] = [a, b].map(x => x.id)
     return idA - idB
