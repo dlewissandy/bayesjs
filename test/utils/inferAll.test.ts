@@ -1,5 +1,3 @@
-import * as expect from 'expect'
-
 import { network } from '../../models/alarm'
 import { network as hugeNetwork } from '../../models/huge-network'
 import { InferenceEngine, ICptWithParents } from '../../src/index'

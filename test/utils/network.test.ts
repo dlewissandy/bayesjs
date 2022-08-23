@@ -1,5 +1,3 @@
-import * as expect from 'expect'
-
 import { INetwork, INode } from '../../src/types'
 import {
   createNetwork,

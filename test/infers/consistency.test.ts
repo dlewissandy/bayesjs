@@ -1,6 +1,4 @@
 'use strict'
-import * as expect from 'expect'
-
 import { allNodes } from '../../models/huge-network'
 import { createNetwork, normalizeCliquePotential } from '../../src/utils'
 import createCliques from '../../src/inferences/junctionTree/create-cliques'

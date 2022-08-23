@@ -1,5 +1,3 @@
-import * as expect from 'expect'
-
 import { fromCPT } from '../../src/engines'
 
 describe('fromCPT', () => {

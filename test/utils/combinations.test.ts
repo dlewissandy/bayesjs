@@ -1,4 +1,3 @@
-import * as expect from 'expect'
 import { buildCombinations, createNetwork } from '../../src/utils'
 import { allNodes } from '../../models/rain-sprinkler-grasswet'
 

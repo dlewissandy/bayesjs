@@ -1,6 +1,4 @@
 
-import * as expect from 'expect'
-
 import { network } from '../../models/huge-network'
 import { InferenceEngine } from '../../src/index'
 import { product, sum } from 'ramda'

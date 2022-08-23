@@ -1,5 +1,3 @@
-import * as expect from 'expect'
-
 import { IInfer } from '../../src/types'
 import { allNodes } from '../../models/rain-sprinkler-grasswet'
 import { createNetwork } from '../../src/utils'

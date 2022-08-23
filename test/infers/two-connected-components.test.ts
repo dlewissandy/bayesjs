@@ -1,5 +1,3 @@
-import * as expect from 'expect'
-
 import { IInfer, INode } from '../../src/types'
 import { createNetwork } from '../../src/utils'
 import { inferences } from '../../src'
