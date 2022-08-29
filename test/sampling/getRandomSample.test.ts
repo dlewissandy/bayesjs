@@ -1,6 +1,7 @@
 
 import { network } from '../../models/alarm'
 import { network as net4 } from '../../models/fourNode'
+import { network as huge } from '../../models/huge-network'
 import { InferenceEngine, FastPotential } from '../../src'
 import { groupDataByObservedValues } from '../../src/learning/Observation'
 import { indexToCombination } from '../../src/engines'
@@ -83,5 +84,11 @@ describe('getRandomSample', () => {
     const expected = dist.getPotentials().map(p => Number.isNaN(p) ? 0 : p)
     const residuals = observed.map((x, i) => Math.abs(x - expected[i]))
     expect(residuals.every(p => p < 0.02)).toEqual(true)
+  })
+  it('works for very large networks', () => {
+    const engine = new InferenceEngine(huge)
+    const observed = engine.getRandomSample(100)
+    expect(observed.length).toEqual(100)
+    expect(observed.every(x => Object.keys(x).length === engine.getVariables().length)).toEqual(true)
   })
 })
