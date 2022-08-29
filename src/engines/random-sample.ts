@@ -10,6 +10,7 @@ import { normalize } from './util'
 import { FastClique } from './FastClique'
 import { FastNode } from './FastNode'
 import { Formula } from './Formula'
+import { evaluateFormula } from './evaluate-join-probability'
 
 /** A CliqueInfo object is collection of information about a
  * clique that facilitates efficient random sampling of that
@@ -88,9 +89,17 @@ function getCliqueInfo (
   }
 
   const numberOfHeadVariables = headVariables.length
-
   // construct the conditional distribution for the clique from the posterior
   // joint probability distribution.
+  evaluateFormula(
+    clique.posterior,
+    nodes,
+    formulas,
+    potentials,
+    formulas.length,
+    formulas.map(x => x.size),
+    nodes.map(() => null),
+  )
   const posterior = potentials[clique.posterior] as FastPotential
   const posteriorDomain = formulas[clique.posterior].domain
   const posteriorNumLvls = posteriorDomain.map(x => nodes[x].levels.length)
@@ -99,6 +108,7 @@ function getCliqueInfo (
   // probability distribution.
   const parentNumOfLvls = parentVariables.map(x => nodes[x].levels.length)
   const parentSize = product(parentNumOfLvls)
+  // ensure that the clique potential is computed!
   const parentPotential = evaluateMarginalPure(
     posterior,
     posteriorDomain,
@@ -108,7 +118,6 @@ function getCliqueInfo (
     parentSize,
     false,
   )
-
   let conditional: FastPotential = []
   // The order of the variables in the posterior may not be in the
   // head/parent variable order of the conditional.   if required,
@@ -148,7 +157,6 @@ function getCliqueInfo (
       ),
     )
   }
-
   return {
     id: clique.id,
     domain: conditionalDomain,
@@ -207,7 +215,6 @@ function getTraversalOrder (engine: InferenceEngine): CliqueInfo[] {
         info.domain.slice(0, info.numberOfHeadVariables),
       )
       result.push(info)
-
       queue = queue.concat(
         clique.neighbors.filter(x => !visitedCliques.includes(x)),
       )
