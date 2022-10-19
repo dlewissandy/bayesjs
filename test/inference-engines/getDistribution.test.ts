@@ -16,4 +16,16 @@ describe('getDistribution', () => {
     expect(observed.variableLevels).toEqual(expected.variableLevels)
     expect(observed.potentialFunction.map(x => x.toExponential(5))).toEqual(expected.potentialFunction.map(x => x.toExponential(5)))
   })
+  it('getDistribution is the prior local distribution', () => {
+    const engine = new InferenceEngine(network)
+    const name = 'node3'
+    engine.setEvidence({ node3: ['T'] })
+    const observed = engine.getDistribution(name).toJSON()
+    const cpt = network[name]?.cpt as ICptWithParents | ICptWithoutParents
+    const expected = fromCPT('node3', [], [['T', 'F']], cpt).toJSON()
+    expect(observed.numberOfHeadVariables).toEqual(expected.numberOfHeadVariables)
+    expect(observed.variableNames).toEqual(expected.variableNames)
+    expect(observed.variableLevels).toEqual(expected.variableLevels)
+    expect(observed.potentialFunction.map(x => x.toExponential(5))).toEqual(expected.potentialFunction.map(x => x.toExponential(5)))
+  })
 })
