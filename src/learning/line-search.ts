@@ -1,10 +1,8 @@
-import { InferenceEngine } from '..'
 import { TowerOfDerivatives } from './TowerOfDerivatives'
 import { StepResult, StepStatus } from './StepResult'
-import { newtonStep } from './newton-step'
 import { ObjectiveFunction } from './objective-functions/ObjectiveFunction'
-import { SQRTEPS, CUBEROOTEPS } from './vector-utils'
-import { restoreEngine, kahanSum } from '../engines/util'
+import { SQRTEPS, CUBEROOTEPS, directionalDerivative } from './vector-utils'
+import { FastPotential } from '..'
 
 const ALPHA = CUBEROOTEPS
 const BETA = 0.9
@@ -14,10 +12,10 @@ type LineSearchCoordinate = {
   tower: TowerOfDerivatives;
 }
 
-function relativeLength (current: TowerOfDerivatives): number {
-  return current.xs.reduce((accI, ps, i) =>
-    Math.max(accI, ps.reduce((accJK, p, jk) => Math.max(accJK,
-      Math.abs(current.ascentDirection[i][jk]) / Math.max(current.xs[i][jk], SQRTEPS),
+function relativeLength (p: FastPotential[], current: TowerOfDerivatives): number {
+  return current.xs.reduce((accI, xx, i) =>
+    Math.max(accI, xx.reduce((accJK, x, jk) => Math.max(accJK,
+      Math.abs(p[i][jk]) / Math.max(Math.abs(x), SQRTEPS),
     ), 0),
     ), 0)
 }
@@ -25,42 +23,64 @@ function relativeLength (current: TowerOfDerivatives): number {
 /** Given the current best maximizer for the objective function, and a trial
  * maximizer for the objective function which does not satisfy the
  * Armijo Goldstien criteria, attempt to find a better step size
- * and trial maximizer by approximating the objective function as a hermite
+ * and trial maximizer by approximating the objective function as
  * cubic function of the step size.
  *
- * where (x0,y0,m0) and (x1,y1,m1) are the step size, objective function and
- * material derivatives at two know points, and a, b, c and d are the coefficients
- * of the cubic function.
-
- * @param current: The current tower of derivatives
- * @param trial: The next trial solution for the maximizer of the objective function
+ * @param lambda: The best step size found so far
+ * @param initslope: The directional derivative at the current x coordiante
+ * @param current: The tower of derivatives at the current location
+ * @param trial: The tower of derivatives at the best approximator found so far.
+ * @param previous: The previously bet approximator found so far.
  *
- * NOTE: If a real valued maximizer is not found, this function falls back to
- *   the average step size of the two inputs.
  */
-function interpolateStepSize (current: LineSearchCoordinate, trial: LineSearchCoordinate): number {
-  const x0 = current.stepSize
-  const y0 = current.tower.value
-  const m0 = current.tower.directionalDerivative
+function cubicInterpolation (lambda: number, initslope: number, current: TowerOfDerivatives, trial: TowerOfDerivatives, previous: LineSearchCoordinate): number {
+  // Destructure the inputs
+  const { tower, stepSize: lambdaPrev } = previous
+  const { value: fprev } = tower
+  const { value: fplus } = trial
+  const { value: fc } = current
 
-  const x1 = trial.stepSize
-  const y1 = trial.tower.value
-  const m1 = trial.tower.directionalDerivative
-
-  const deltaX = x1 - x0
-
-  const a = ((3 * m0 - m1) - 2 * (y1 - y0) / deltaX) / Math.pow(deltaX, 2)
-  const b = ((m1 - 4 * m0) + 3 * (y1 - y0) / deltaX) / deltaX
-  const c = m0
-  const discriminantSqr = Math.pow(b, 2) - 3 * a * m0
-
-  if (discriminantSqr < 0) return (x1 + x0) / 2
-  if (discriminantSqr === 0) return x0 - c / (2 * b)
-  return x0 + (-b - Math.sqrt(discriminantSqr)) / (3 * a)
+  const deltaLambda = lambda - lambdaPrev
+  const lambdaSqr = lambda * lambda
+  const lambdaPrevSqr = lambdaPrev * lambdaPrev
+  const y = [fplus - fc - lambda * initslope, fprev - fc - lambdaPrev * initslope]
+  const a = (y[0] / lambdaSqr - y[1] / lambdaPrevSqr) / deltaLambda
+  const b = (-lambdaPrev * y[0] / lambdaSqr + lambda * y[1] / lambdaPrevSqr) / deltaLambda
+  const disc = b * b - 3 * a * initslope
+  return (a === 0)
+    // the cubic has repeated roots
+    ? -initslope / (2 * b)
+    // the cubic does not have repeated roots
+    : (-b + Math.sqrt(disc)) / (3 * a)
 }
 
-/** Given a current approximation of the maximizer for the objective function, attempt to
- * find a step size to take in the direction of the ascent vector such that the
+/** A test for the Arjio-Goldstein value change condition.   This condition ensures that the
+  step size is not too large by requiring that the next apprixmation for the minimizer
+  causes the value of the objective function to decrease by at least a small amount
+*/
+function isAlphaConditionSatisfied (fplus: number, fc: number, initslope: number, lambda: number): boolean {
+  return fplus <= fc + ALPHA * lambda * initslope
+}
+
+// A test for the Arjio-Goldstein gradient change condition.  This condition ensures that
+// the step size is not too small by requiring that the directional derivative measured
+// at the next approximation for the minimizer causes the magnitude of the slope to
+// decrease by some small amount.
+function isBetaConditionSatisfied (newslope: number, initslope: number): boolean {
+  // directional derivatives should be non-positive because the hessian is positive definite.
+  return newslope >= BETA * initslope
+}
+
+function successful (lambda: number, tower: TowerOfDerivatives): StepResult {
+  return { stepSize: lambda, tower, status: StepStatus.STEP_TAKEN_TOWARD_MAXIMIZER }
+}
+
+function failure (lambda: number, tower: TowerOfDerivatives, status: StepStatus): StepResult {
+  return { stepSize: lambda, tower, status: status }
+}
+
+/** Given a current approximation of the minimizer for the objective function, attempt to
+ * find a step size to take in the direction of the descent vector such that the
  * objective function increases and both the Arjio and Goldstein conditions are satisfied.
  * This algorithm is based on
  *
@@ -70,117 +90,135 @@ function interpolateStepSize (current: LineSearchCoordinate, trial: LineSearchCo
  * 1) it uses hermite cubic approximation rather than the cubic or quadratic approximation
  *    in the original algorithm.
  * 2) it contains additional optimizations which are possible because the Hessian matrix
- *    is negative definite and diagonal.
+ *    is diagonal.
  *
  * @param engine - the inference engine containing the Bayesian network for which the
  *   parameters are being learned.
  * @param current - the tower of derivatives ar the current set of parameters.
- * @param numbersOfHeadLevels - The number of levels of each head variable in the
- *   bayes network.  This is used in estimating the maximum step size.
+ * @param maxStepSize - the maximum allowable step size
  * @param tolerance - the desired tolerance on the final parameters.
- * @param objectiveFn - the objective function being optimized.
+ * @param objectiveFn - the objective function being minimized.
+ * @param afterStep - an action to perform after a step is performed (optional)
+ * @param afterSuccess - an action to perform after the minimizer is found (optional)
+ * @param afterFailure - an action to perform when no minimizer is found (optional)
  */
-export function lineSearch (engine: InferenceEngine, current: TowerOfDerivatives, numbersOfHeadLevels: number[], tolerance: number, objectiveFn: ObjectiveFunction): StepResult {
+export function lineSearch (current: TowerOfDerivatives, maxStepSize: number, tolerance: number, objectiveFn: ObjectiveFunction): StepResult {
   //= ============= CONSTANTS ====================================
-  // the maximum step size allowed by the algorithm.   This is a first attempt at scaling the
-  // step size based on the size of the network.   I am scaling it so that the max step size is a
-  // multiple of the sum of the number of blocks in each conditional distribution
-  const MAXSTEPSIZE = 0.5 * kahanSum(current.xs.map((ps, i) => ps.length / numbersOfHeadLevels[i]))
-  const MAXLAMBDA = (current.ascentDirectionMagnitude > MAXSTEPSIZE) ? 1 : MAXSTEPSIZE / current.ascentDirectionMagnitude
-  const MINLAMBDA = tolerance / relativeLength(current)
+  const MAXSTEPSIZE = maxStepSize
   const MAXITERATIONS = 100
-  //= =============== UTILITY FUNCTIONS ==========================
-  // A test for the Arjio-Goldstein value change condition.   This condition ensures that the
-  // step size is not too large by requiring that the next apprixmation for the maximizer
-  // causes the value of the objective function to decrease by at least a small amount
-  const alphaCondition = (trial: TowerOfDerivatives, stepSize: number) => trial.value >= current.value + ALPHA * stepSize * current.directionalDerivative
-  // A test for the Arjio-Goldstein gradient change condition.  This condition ensures that
-  // the step size is not too small by requiring that the directional derivative measured
-  // at the next approximation for the maximizer causes the slope to decrease by some small
-  // amount.
-  const betaCondition = (trial: TowerOfDerivatives) => BETA * current.directionalDerivative >= trial.directionalDerivative
-  // Compute the next approximation for the maximizer of the objective function by taking
-  // a step along the (quasi-)Newton ascent direction.
-  const nextEstimate = (trial: TowerOfDerivatives, stepSize: number): LineSearchCoordinate => newtonStep(engine, current, stepSize, objectiveFn)
 
   //= =============== PRECONDITIONING ==========================
-  // Clamp the ascent direction's magnitude so that it does not exceed the
+  // Clamp the descent direction's magnitude so that it does not exceed the
   // maximum step size.
-  if (current.ascentDirectionMagnitude > MAXSTEPSIZE) {
-    current.ascentDirection = current.ascentDirection.map(ps => ps.map(p => MAXSTEPSIZE * p / current.ascentDirectionMagnitude))
-    current.directionalDerivative = MAXSTEPSIZE * current.directionalDerivative / current.ascentDirectionMagnitude
-    current.ascentDirectionMagnitude = MAXSTEPSIZE
+  const [p, newtLen] = current.descentDirectionMagnitude <= MAXSTEPSIZE
+    ? [current.descentDirection, current.descentDirectionMagnitude]
+    : [current.descentDirection.map(xs => xs.map(x => MAXSTEPSIZE * x / current.descentDirectionMagnitude)), MAXSTEPSIZE]
+
+  const MAXLAMBDA = (newtLen > MAXSTEPSIZE) ? 1 : MAXSTEPSIZE / newtLen
+  const MINLAMBDA = tolerance / relativeLength(p, current)
+
+  let lambda = 1 // Step 9
+  const initslope = directionalDerivative(p, current.gradient) // Step 6
+  const fc = current.value
+
+  //= =============== UTILITY FUNCTIONS ==========================
+
+  // Compute the next approximation for the maximizer of the objective function by taking
+  // a step along the (quasi-)Newton descent direction.
+  const nextEstimate = (lambda: number) => {
+    const xPlus = current.xs.map((qs, i) => qs.map((q, jk) => q + lambda * p[i][jk]))
+    return objectiveFn(xPlus)
   }
 
   //= =============== BACKTRACKING SEARCH ==========================
   // We begin the search with a full step in the quasi-newton direction.
   let iteration = 0
-  let trial: LineSearchCoordinate = newtonStep(engine, current, 1, objectiveFn)
+
+  let trial: TowerOfDerivatives = current
+  let newslope = 0
   let previous: LineSearchCoordinate | undefined
   do {
-    if (alphaCondition(trial.tower, trial.stepSize)) {
-      // ALPHA CONDITION IS TRUE
-      if (betaCondition(trial.tower)) {
-        // ALPHA AND BETA CONDITION ARE TRUE
-        // If a step size has been found that satisfies the Arjio and Goldstein
-        // conditions, then return the found step size and tower of derivatives
-        // at the new set of parameters.
-        restoreEngine(engine, trial.tower.xs, {})
-        return { ...trial, status: StepStatus.STEP_TAKEN_TOWARD_MAXIMIZER }
+    trial = nextEstimate(lambda) // step 10.1, 10.2,
+    console.log(trial)
+    if (isAlphaConditionSatisfied(trial.value, fc, initslope, lambda)) {
+      console.log('Alpha is satisfied')
+      // *********************
+      // STEP 10.3a
+      // *********************
+      newslope = directionalDerivative(p, trial.gradient)
+      if (isBetaConditionSatisfied(newslope, initslope)) {
+        console.log('EXIT A')
+        return successful(lambda, trial)
       }
-      // ALPHA CONDITION IS TRUE, BUT BETA IS NOT
-      if (trial.stepSize === 1 && trial.tower.ascentDirectionMagnitude < MAXSTEPSIZE) {
+      if (lambda === 1 && newtLen < MAXSTEPSIZE) {
         // If this is the first iteration and the step size can be increased, then
         // attempt to do so.
         do {
-          const stepSize = Math.min(2 * trial.stepSize, MAXLAMBDA)
-          previous = trial
-          trial = nextEstimate(current, stepSize)
-        } while (alphaCondition(trial.tower, trial.stepSize) && !betaCondition(trial.tower) && trial.stepSize < MAXLAMBDA)
+          previous = { tower: trial, stepSize: lambda }
+          lambda = Math.min(2 * lambda, MAXLAMBDA)
+          trial = nextEstimate(lambda)
+          if (isAlphaConditionSatisfied(trial.value, fc, initslope, lambda)) { newslope = directionalDerivative(p, trial.gradient) }
+        } while (isAlphaConditionSatisfied(trial.value, fc, initslope, lambda) && !isBetaConditionSatisfied(newslope, initslope) && lambda < MAXLAMBDA)
         // Note: This may result in either both conditions being true, just alpha being true (when max step size is reached),
         // or neither condition being satisfied.
       }
-      if (previous && (trial.stepSize < 1 || (trial.stepSize > 1 && !alphaCondition(trial.tower, trial.stepSize)))) {
+      if (previous != null && ((lambda < 1) || ((lambda > 1) && !(isAlphaConditionSatisfied(trial.value, fc, initslope, lambda))))) {
         // if the step size has previously been modified, see if there is a better step size between the current
         // and trial step sizes.  This will have the effect of reducing the step size, which may cause the alpha
         // condition to become satisfied, or the beta condition to become unsatisfied.
-        let [lo, hi]: LineSearchCoordinate[] = trial.stepSize > previous.stepSize
-          ? [previous, trial] : [trial, previous]
-        let better: LineSearchCoordinate = trial
-        let diff: number = hi.stepSize - lo.stepSize
-        while (diff >= MINLAMBDA || betaCondition(better.tower)) {
-          better = nextEstimate(current, interpolateStepSize(lo, hi))
-          if (alphaCondition(better.tower, better.stepSize)) {
-            hi = better
+        const trialCoord = { tower: trial, stepSize: lambda }
+        let [lo, hi]: LineSearchCoordinate[] = lambda > previous.stepSize
+          ? [previous, trialCoord] : [trialCoord, previous]
+
+        let diff: number = Math.abs(hi.stepSize - lo.stepSize)
+        while (diff >= MINLAMBDA && !isBetaConditionSatisfied(newslope, initslope)) {
+          const lambdaIncr = Math.max(
+            -(newslope * diff * diff) / (2 * (hi.tower.value - (lo.tower.value + newslope * diff))),
+            0.2 * diff)
+          lambda = lo.stepSize + lambdaIncr
+          trial = nextEstimate(lambda)
+          if (!isAlphaConditionSatisfied(trial.value, fc, initslope, lambda)) {
+            diff = lambdaIncr
+            hi = { tower: trial, stepSize: lambda }
           } else {
-            lo = better
+            newslope = directionalDerivative(p, trial.gradient)
+            if (!isBetaConditionSatisfied(newslope, initslope)) {
+              lo = { stepSize: lambda, tower: trial }
+              diff = diff - lambdaIncr
+            }
           }
-          diff = hi.stepSize - lo.stepSize
         }
-        if (betaCondition(better.tower)) {
-          return { ...better, status: StepStatus.STEP_TAKEN_TOWARD_MAXIMIZER }
+        if (isBetaConditionSatisfied(newslope, initslope)) {
+          console.log('EXIT B')
+          return successful(lambda, nextEstimate(lambda))
         } else {
-          return { ...lo, status: StepStatus.STEP_TAKEN_TOWARD_MAXIMIZER }
+          console.log('EXIT C')
+          return successful(lo.stepSize, lo.tower)
         }
       }
+    } else if (lambda < MINLAMBDA) {
+      console.log('EXIT D')
+      console.log(lambda)
+      return failure(0, current, StepStatus.STEPSIZE_TOO_SMALL)
     } else {
-      if (trial.stepSize < MINLAMBDA) {
-        // The trial is not sufficiently distinct from the current value.  We are done.
-        return { tower: current, stepSize: 0, status: StepStatus.STEPSIZE_TOO_SMALL }
+      console.log('Alpha not satisfied but could be smaller')
+      // STEP 10.3c
+      let temp = lambda
+      if (lambda === 1) {
+        // STEP 10.3c.1T
+        temp = -initslope / (2 * (trial.value - fc - initslope))
+      } else {
+        // STEP 10.3c.1E
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        temp = cubicInterpolation(lambda, initslope, current, trial, previous!)
+        temp = Math.min(0.5 * lambda, temp)
+        console.log(temp)
       }
-      // The alpha condition is not satisfied.   Attempt to find a better step size
-      // and trial maximizer by approximating the objective function as a hermite
-      // cubic function of the step size, and interpolating the point at which the
-      // derivative is zero.   Since the Hessian is negative definite, if such a point
-      // exists, it is a better approximation for a maximizer.  To prevent too large
-      // a change from the current step size, we clamp  this to the interval
-      // 0.1 * current step size < approx < 0.5 * current step size.
-      const approx = interpolateStepSize({ tower: current, stepSize: 0 }, trial)
-      const stepSize = Math.max(0.1 * trial.stepSize, Math.min(0.5 * trial.stepSize, approx))
-      trial = nextEstimate(current, stepSize)
+      previous = { tower: trial, stepSize: lambda }
+      lambda = Math.max(0.1 * lambda, temp)
     }
-    previous = trial
     iteration++
   } while (iteration < MAXITERATIONS)
-  return { ...trial, status: StepStatus.BACKTRACKING_STEPS_EXCEEDED }
+  console.log('EXIT E')
+  return failure(lambda, trial, StepStatus.BACKTRACKING_STEPS_EXCEEDED)
 }

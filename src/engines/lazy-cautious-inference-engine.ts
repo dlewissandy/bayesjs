@@ -132,13 +132,20 @@ export class LazyPropagationEngine implements IInferenceEngine {
 
   // implementation of the getDistribution interface function.
   // this returns the prior local distribution for the given variable.
-  getDistribution = (name: string) => {
+  getPriorDistribution = (name: string) => {
     const headNode = this._nodes.find(x => x.name === name)
     if (headNode == null) throw new Error(`Cannot get local distribution for ${name}.  Variable does not exist.`)
     const parents = headNode?.parents.map(i => this._nodes[i]).map(p => ({ name: p.name, levels: p.levels })) || []
     const potentials = this._potentials[headNode.id] || Array(this._formulas[headNode.id].size).fill(1 / headNode.levels.length)
     const headLevels = headNode.levels
     return new Distribution([{ name, levels: headLevels }], parents, potentials)
+  }
+
+  getPosteriorDistribution = (name: string) => {
+    const headNode = this._nodes.find(x => x.name === name)
+    if (headNode == null) throw new Error(`Cannot get local distribution for ${name}.  Variable does not exist.`)
+    const parents = headNode?.parents.map(i => this._nodes[i]).map(p => p.name) || []
+    return this.getJointDistribution([name], parents)
   }
 
   /**

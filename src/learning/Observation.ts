@@ -58,7 +58,7 @@ export function sampleBasedAverages (engine: InferenceEngine, groups: GroupedEvi
   const numbersOfHeadLevels = names.map(name => engine.getLevels(name).length)
   const heads = groups.reduce((acc: FastPotential[], { evidence, frequency }) => {
     engine.setEvidence(evidence)
-    const potentials = names.map(name => engine.getDistribution(name).getPotentials()) as FastPotential[]
+    const potentials = names.map(name => engine.getJointDistribution([name], []).getPotentials()) as FastPotential[]
     const weightedPotentials = potentials.map((ps: FastPotential) => ps.map(p => p * frequency))
     if (acc.length === 0) return weightedPotentials
     return acc.map((ps, i) => ps.map((p, j) => p + weightedPotentials[i][j]))

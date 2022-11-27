@@ -1,8 +1,7 @@
-import { InferenceEngine, FastPotential } from '..'
+import { FastPotential } from '..'
 import { TowerOfDerivatives } from './TowerOfDerivatives'
 import { StepStatus, StepResult } from './StepResult'
 import { ObjectiveFunction } from './objective-functions/ObjectiveFunction'
-import { restoreEngine } from '../engines/util'
 
 /** Given an inference engine, a tower of derivatives and an objective
  * function return a result containing the tower of derivatives
@@ -20,18 +19,18 @@ import { restoreEngine } from '../engines/util'
  * precondition is not checked, and must be satisfied by the caller.
  */
 export function newtonStep (
-  engine: InferenceEngine,
   current: TowerOfDerivatives,
   stepSize: number,
   objectiveFn: ObjectiveFunction,
+  afterStep: (xs: FastPotential[]) => void = () => undefined,
 ): StepResult {
-  const newtonDirection = current.ascentDirection
+  const newtonDirection = current.descentDirection
   // Compute the new potentials at the specified distance along the
   // ascent direction.
-  const trialXs: FastPotential[] = current.xs.map((ps, i) => ps.map((p, jk) => p - stepSize * newtonDirection[i][jk]))
+  const trialXs: FastPotential[] = current.xs.map((ps, i) => ps.map((p, jk) => p + stepSize * newtonDirection[i][jk]))
   // Restore the inference engine to the trial set of parameters to
   // facilitate making probabilistic inferences.
-  restoreEngine(engine, trialXs, {})
+  afterStep(trialXs)
   // Construct the tower of derivatives and the step result.
-  return { tower: objectiveFn(engine), stepSize, status: StepStatus.STEP_TAKEN_TOWARD_MAXIMIZER }
+  return { tower: objectiveFn(trialXs), stepSize, status: StepStatus.STEP_TAKEN_TOWARD_MAXIMIZER }
 }

@@ -42,9 +42,13 @@ export interface IInferenceEngine {
   // parents of the variable, the function must throw an errror.
   setDistribution: (distribution: Distribution) => void;
 
-  // Query the underlying Bayes network and return a clone of the probability
-  // distribution for the given variable.
-  getDistribution: (name: string) => Distribution;
+  // Query the underlying Bayes network and return a clone of the prior (no evidence)
+  // local distribution for a variable
+  getPriorDistribution: (name: string) => Distribution;
+
+  // Query the underlying Bayes network and return a clone of the posterior (with any evidence)
+  // local distribution for a variable
+  getPosteriorDistribution: (name: string) => Distribution;
 
   // Test if evidence has been provided for the given variable.
   hasEvidenceFor: (name: string) => boolean;

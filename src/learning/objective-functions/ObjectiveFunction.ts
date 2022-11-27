@@ -1,4 +1,4 @@
-import { InferenceEngine } from '../..'
+import { FastPotential } from '../..'
 import { TowerOfDerivatives } from '../TowerOfDerivatives'
 
-export type ObjectiveFunction = (engine: InferenceEngine) => TowerOfDerivatives
+export type ObjectiveFunction = (xs: FastPotential[]) => TowerOfDerivatives

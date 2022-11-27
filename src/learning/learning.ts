@@ -1,14 +1,14 @@
 import { InferenceEngine } from '..'
-import { restoreEngine } from '../engines/util'
+import { kahanSum, restoreEngine } from '../engines/util'
 import { FastPotential } from '../engines/FastPotential'
 import { PairedObservation, groupDataByObservedValues } from './Observation'
 import { TowerOfDerivatives } from './TowerOfDerivatives'
 import { StepStatus, statusMessage } from './StepResult'
-import { newtonStep } from './newton-step'
-import { localDistributionPotentials } from './objective-functions/util'
+import { localDistributionPosteriorPotentials } from './objective-functions/util'
 import { objectiveFunction } from './objective-functions/online-learning-objective-function'
 import { SQRTEPS, CUBEROOTEPS } from './vector-utils'
 import { lineSearch } from './line-search'
+import { ObjectiveFunction } from './objective-functions'
 
 export type LearningResult = {
   steps: number;
@@ -20,7 +20,7 @@ export type LearningResult = {
 }
 
 /** Compute a relative gradient that can be used for detecting if
- * the initial parameters are a maximizer for the objective function.
+ * the initial parameters are a minimizer for the objective function.
  * @param current - the current (intial) tower of derivatives
  * For a measure of the relative gradient, we take the maximum reltaive change in
  * f with respect to the relative change in a parameter.   This is scaled
@@ -34,8 +34,8 @@ function relativeGradient (current: TowerOfDerivatives): number {
   // to the square root of epsilon.
   const numerator = current.gradient.reduce((acc, gs, i) =>
     Math.max(acc, gs.reduce((acc2, g, jk) => {
-      const representativeX = Math.max(SQRTEPS, Math.abs(current.xs[i][jk]))
-      return Math.abs(g * representativeX)
+      const representativeX = Math.max(0.5, Math.abs(current.xs[i][jk]))
+      return Math.max(acc2, Math.abs(g * representativeX))
     }, 0)), 0)
   // However the relative gradient can still be effected by the scale of the
   // objective function.   To fix this, we divide by the greater the current value
@@ -46,7 +46,7 @@ function relativeGradient (current: TowerOfDerivatives): number {
 }
 
 /** Compute a relative change in the parameters that can be used for detecting if
- * the maximizer for the objective function has been found.
+ * the minimizer for the objective function has been found.
  * @param current - the current (intial) tower of derivatives
  * @param trial - a new set of parameters identified by either a Newton or quasi-
  *   Newton step.
@@ -60,6 +60,97 @@ function relativeChange (current: TowerOfDerivatives, trial: TowerOfDerivatives)
       Math.abs(p - trial.xs[i][jk]) / Math.max(Math.abs(p), SQRTEPS),
     ), 0),
     ), 0)
+}
+
+/** This function implements the unconstrained minimization as described in
+ * "Numerical Methods for Unconstrained Optimization and Nonlinear Equations"
+ * by JE Dennis and R. Schnabel.
+ *
+ * @param xs0: The initial guess for the parameters that will minimize the
+ *   objective function.
+ * @param maximumStepSize: The maximum step size allowed between two successive
+ *   iterations (as a fraction of the Newton Step size)
+ * @param maxIterations: The maximum number of gradient descent steps that will
+ *   be allowed while seeking the minimizer.
+ * @param tolerance: The absolute tolerance that the minimizer must satisfy.
+ * @param objectiveFn: The objective function being minimized
+ *
+*/
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+export function minimize (xs0: FastPotential[], maximumStepSize: number, maxIterations: number, tolerance: number, objectiveFn: ObjectiveFunction, afterStep: (xs: FastPotential[]) => void = () => { }, afterSuccess: (xs: FastPotential[]) => void = () => { }, afterFailure: (xs: FastPotential[]) => void = () => { }): LearningResult {
+  // Perform some sanity checks on the data and parameters before we start
+  // mutating the inference engine.
+  const throwErr = (reason: string) => { throw new Error(`Cannot minimize. ${reason}`) }
+  if (maxIterations < 0) throwErr('The maximum iterations must be positive')
+  if (tolerance < Number.EPSILON || tolerance > 1) throwErr('The tolerance must be between 0 and 1.')
+
+  let current = objectiveFn(xs0)
+  const tower0 = objectiveFn(xs0)
+
+  // This helper function is used to construct the return result with an
+  // appropriate message.  As a side effect it restores the inference
+  // engine to the specified parameter values.
+  const makeResult = (steps: number, trial: TowerOfDerivatives, converged: boolean, message: string) => {
+    afterSuccess(trial.xs)
+    return { steps, converged, value: trial.value, directionalDerivative: trial.directionalDerivative, parameters: trial.xs, message }
+  }
+
+  // Is the initial state a minimizer for the objective function?  If so, then
+  // exit.
+  if (relativeGradient(current) < 0.001 * CUBEROOTEPS) {
+    console.log(relativeGradient(current))
+    console.log('EXIT 0')
+    afterSuccess(current.xs)
+    return { steps: 0, converged: true, value: current.value, directionalDerivative: current.directionalDerivative, parameters: current.xs, message: statusMessage(StepStatus.GRADIENT_TOO_SMALL) }
+  }
+
+  let iteration = 0
+  do {
+    // Attempt to find a better approximation of the minimizer for the
+    // objective function by taking an appropriately sized step in the
+    // ascent direction.  When the Hessian is ill conditioned, then
+    // use a line search method to find the appropriate step size in
+    // the quasi-Newton direction, otherwise take a full step in the
+    // Newton direction.
+    const trial = lineSearch(current, maximumStepSize, tolerance, objectiveFn)
+    console.log(`Iteration: ${iteration}, stepSize: ${trial.stepSize}`)
+
+    // Check to see if some termination condition has been reached.   if it
+    // has, then exit with an appropriate status message.
+    if (trial.status === StepStatus.GRADIENT_TOO_SMALL) {
+      console.log('EXIT 1')
+      return makeResult(iteration, trial.tower, true, statusMessage(trial.status))
+    }
+    if (trial.status === StepStatus.BACKTRACKING_STEPS_EXCEEDED) {
+      console.log('EXIT 2')
+      return makeResult(iteration, trial.tower, false, statusMessage(trial.status))
+    }
+    if (relativeGradient(trial.tower) < CUBEROOTEPS) {
+      console.log('EXIT 3')
+      return makeResult(iteration, trial.tower, true, statusMessage(StepStatus.GRADIENT_TOO_SMALL))
+    }
+    if (relativeChange(current, trial.tower) < tolerance) {
+      console.log('EXIT 4')
+      return makeResult(iteration, trial.tower, true, statusMessage(StepStatus.STEPSIZE_TOO_SMALL))
+    }
+    // Otherwise, set up for the next iteration.
+    current = trial.tower
+    afterStep(current.xs)
+    iteration++
+  } while (iteration < maxIterations)
+  // If we reached this point, then the algorithm failed to find a minimizer for
+  // the objective function.  Restore the inference engine to the original state
+  // and return a "failure" result.
+  afterFailure(tower0.xs)
+  console.log('EXIT 5')
+  return {
+    steps: iteration,
+    value: current.value,
+    directionalDerivative: current.directionalDerivative,
+    converged: false,
+    parameters: current.xs,
+    message: statusMessage(StepStatus.STEPS_EXCEEDED),
+  }
 }
 
 /** Given a collection of paired observations and a Bayesian network with possibly informed
@@ -109,59 +200,16 @@ export function learnParameters (engine: InferenceEngine, data: PairedObservatio
   // event of a failure to converge.
   const initialEvidence = engine.getAllEvidence()
   const cachedPriors = engine.toJSON()._potentials.slice(0, variableNames.length) as FastPotential[]
-  const initialPriors = variableNames.map(name => localDistributionPotentials(name, engine))
+  engine.removeAllEvidence()
+  const initialPriors = variableNames.map(name => localDistributionPosteriorPotentials(name, engine))
   const groupedData = groupDataByObservedValues(data, engine)
-  const objectiveFn = objectiveFunction(groupedData, initialPriors, learningRate)
+  const objectiveFn = objectiveFunction(groupedData, initialPriors, learningRate, engine)
+  const current = objectiveFn(initialPriors)
+  const MAXSTEPSIZE = 0.5 * kahanSum(current.xs.map((ps, i) => ps.length / numbersOfHeadLevels[i]))
 
-  // This helper function is used to construct the return result with an
-  // appropriate message.  As a side effect it restores the inference
-  // engine to the specified parameter values.
-  const makeResult = (steps: number, trial: TowerOfDerivatives, converged: boolean, message: string) => {
-    restoreEngine(engine, trial.xs, {})
-    return { steps, converged, value: trial.value, directionalDerivative: trial.directionalDerivative, parameters: trial.xs, message }
-  }
+  const afterStep = (xs: FastPotential[]) => restoreEngine(engine, xs, {})
+  const afterSuccess = (xs: FastPotential[]) => restoreEngine(engine, xs, {})
+  const afterFailure = () => restoreEngine(engine, cachedPriors, initialEvidence)
 
-  let current = objectiveFn(engine)
-
-  // Is the initial state a maximizer for the objective function?  If so, then
-  // exit.
-  if (relativeGradient(current) < 0.001 * CUBEROOTEPS) {
-    restoreEngine(engine, cachedPriors, initialEvidence)
-    return { steps: 0, converged: true, value: current.value, directionalDerivative: current.directionalDerivative, parameters: current.xs, message: statusMessage(StepStatus.GRADIENT_TOO_SMALL) }
-  }
-
-  let iteration = 0
-  do {
-    // Attempt to find a better approximation of the maximizer for the
-    // objective function by taking an appropriately sized step in the
-    // ascent direction.  When the Hessian is ill conditioned, then
-    // use a line search method to find the appropriate step size in
-    // the quasi-Newton direction, otherwise take a full step in the
-    // Newton direction.
-    const trial = (current.conditionNumber > SQRTEPS)
-      ? newtonStep(engine, current, 1, objectiveFn)
-      : lineSearch(engine, current, numbersOfHeadLevels, tolerance, objectiveFn)
-    // Check to see if some termination condition has been reached.   if it
-    // has, then exit with an appropriate status message.
-    if (trial.status === StepStatus.GRADIENT_TOO_SMALL) return makeResult(iteration, trial.tower, true, statusMessage(trial.status))
-    if (trial.status === StepStatus.BACKTRACKING_STEPS_EXCEEDED) return makeResult(iteration, trial.tower, false, statusMessage(trial.status))
-    if (relativeGradient(trial.tower) < CUBEROOTEPS) return makeResult(iteration, trial.tower, true, statusMessage(StepStatus.GRADIENT_TOO_SMALL))
-    if (relativeChange(current, trial.tower) < tolerance) return makeResult(iteration, trial.tower, true, statusMessage(StepStatus.STEPSIZE_TOO_SMALL))
-    // Otherwise, set up for the next iteration.
-    current = trial.tower
-    restoreEngine(engine, current.xs, {})
-    iteration++
-  } while (iteration < maxIterations)
-  // If we reached this point, then the algorithm failed to find a maximizer for
-  // the objective function.  Restore the inference engine to the original state
-  // and return a "failure" result.
-  restoreEngine(engine, cachedPriors, initialEvidence)
-  return {
-    steps: iteration,
-    value: current.value,
-    directionalDerivative: current.directionalDerivative,
-    converged: false,
-    parameters: current.xs,
-    message: statusMessage(StepStatus.STEPS_EXCEEDED),
-  }
+  return minimize(initialPriors, MAXSTEPSIZE, maxIterations, tolerance, objectiveFn, afterStep, afterSuccess, afterFailure)
 }
