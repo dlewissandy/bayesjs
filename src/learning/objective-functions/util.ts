@@ -51,7 +51,7 @@ export function localDistributionPotentials (name: string, engine: InferenceEngi
   // local distribution are stored as the joint over the head and
   // parent variables, but because they are consistent, we can use these
   // to reconstruct the conditional distribution.
-  const dist = engine.getDistribution(name)
+  const dist = engine.getJointDistribution([name], engine.getParents(name))
   const numberOfHeadLevels = dist.getHeadVariable(name).levels.length
   const joint = dist.getPotentials()
 
