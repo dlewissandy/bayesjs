@@ -1,5 +1,4 @@
 import { InferenceEngine } from '..'
-import { kahanSum, restoreEngine } from '../engines/util'
 import { FastPotential } from '../engines/FastPotential'
 import { PairedObservation, groupDataByObservedValues } from './Observation'
 import { TowerOfDerivatives } from './TowerOfDerivatives'
@@ -9,6 +8,7 @@ import { objectiveFunction } from './objective-functions/online-learning-objecti
 import { SQRTEPS, CUBEROOTEPS } from './vector-utils'
 import { lineSearch } from './line-search'
 import { ObjectiveFunction } from './objective-functions'
+import { gradientDescentLineSearch } from './optimize'
 
 export type LearningResult = {
   steps: number;
@@ -34,7 +34,7 @@ function relativeGradient (current: TowerOfDerivatives): number {
   // to the square root of epsilon.
   const numerator = current.gradient.reduce((acc, gs, i) =>
     Math.max(acc, gs.reduce((acc2, g, jk) => {
-      const representativeX = Math.max(0.5, Math.abs(current.xs[i][jk]))
+      const representativeX = Math.max(0.05, Math.abs(current.xs[i][jk]))
       return Math.max(acc2, Math.abs(g * representativeX))
     }, 0)), 0)
   // However the relative gradient can still be effected by the scale of the
@@ -105,6 +105,7 @@ export function minimize (xs0: FastPotential[], maximumStepSize: number, maxIter
   }
 
   let iteration = 0
+  console.log(`prior: ${iteration}, value: ${current.value}`)
   do {
     // Attempt to find a better approximation of the minimizer for the
     // objective function by taking an appropriately sized step in the
@@ -113,7 +114,7 @@ export function minimize (xs0: FastPotential[], maximumStepSize: number, maxIter
     // the quasi-Newton direction, otherwise take a full step in the
     // Newton direction.
     const trial = lineSearch(current, maximumStepSize, tolerance, objectiveFn)
-    console.log(`Iteration: ${iteration}, stepSize: ${trial.stepSize}`)
+    console.log(`Iteration: ${iteration}, stepSize: ${trial.stepSize}, value: ${trial.tower.value}, status: ${trial.status}`)
 
     // Check to see if some termination condition has been reached.   if it
     // has, then exit with an appropriate status message.
@@ -192,24 +193,23 @@ export function learnParameters (engine: InferenceEngine, data: PairedObservatio
   if (tolerance < Number.EPSILON || tolerance > 1) throwErr('The tolerance must be between 0 and 1.')
 
   const variableNames = engine.getVariables()
-  const numbersOfHeadLevels: number[] = variableNames.map(name => engine.getLevels(name).length)
+  // const numbersOfHeadLevels: number[] = variableNames.map(name => engine.getLevels(name).length)
 
   // Cache the initial state of the inference engine.   We cache the initial
   // evidence so that it can be restored at the end of the learning episode.
   // We cache the local distributions so that we can roll them back in the
   // event of a failure to converge.
-  const initialEvidence = engine.getAllEvidence()
-  const cachedPriors = engine.toJSON()._potentials.slice(0, variableNames.length) as FastPotential[]
+  // const initialEvidence = engine.getAllEvidence()
+  // const cachedPriors = engine.toJSON()._potentials.slice(0, variableNames.length) as FastPotential[]
   engine.removeAllEvidence()
   const initialPriors = variableNames.map(name => localDistributionPosteriorPotentials(name, engine))
   const groupedData = groupDataByObservedValues(data, engine)
   const objectiveFn = objectiveFunction(groupedData, initialPriors, learningRate, engine)
   const current = objectiveFn(initialPriors)
-  const MAXSTEPSIZE = 0.5 * kahanSum(current.xs.map((ps, i) => ps.length / numbersOfHeadLevels[i]))
 
-  const afterStep = (xs: FastPotential[]) => restoreEngine(engine, xs, {})
-  const afterSuccess = (xs: FastPotential[]) => restoreEngine(engine, xs, {})
-  const afterFailure = () => restoreEngine(engine, cachedPriors, initialEvidence)
+  // const afterStep = (xs: FastPotential[]) => restoreEngine(engine, xs, {})
+  // const afterSuccess = (xs: FastPotential[]) => restoreEngine(engine, xs, {})
+  // const afterFailure = () => restoreEngine(engine, cachedPriors, initialEvidence)
 
-  return minimize(initialPriors, MAXSTEPSIZE, maxIterations, tolerance, objectiveFn, afterStep, afterSuccess, afterFailure)
+  return gradientDescentLineSearch(objectiveFn, current)
 }

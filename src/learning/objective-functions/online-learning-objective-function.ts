@@ -85,7 +85,7 @@ export function objectiveFunction (groups: GroupedEvidence[], priors: FastPotent
       gradient: adjustedGradient,
       hessian: H,
       hessianIsApproximate: isApproximated,
-      descentDirection: direction,
+      descentDirection: direction.map(ps => ps.map(p => p / magnitude)),
       descentDirectionMagnitude: magnitude,
       directionalDerivative: directionalDerivative(direction, gradient),
     }

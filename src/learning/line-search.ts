@@ -12,7 +12,7 @@ type LineSearchCoordinate = {
   tower: TowerOfDerivatives;
 }
 
-function relativeLength (p: FastPotential[], current: TowerOfDerivatives): number {
+export function relativeLength (p: FastPotential[], current: TowerOfDerivatives): number {
   return current.xs.reduce((accI, xx, i) =>
     Math.max(accI, xx.reduce((accJK, x, jk) => Math.max(accJK,
       Math.abs(p[i][jk]) / Math.max(Math.abs(x), SQRTEPS),
@@ -115,7 +115,7 @@ export function lineSearch (current: TowerOfDerivatives, maxStepSize: number, to
     : [current.descentDirection.map(xs => xs.map(x => MAXSTEPSIZE * x / current.descentDirectionMagnitude)), MAXSTEPSIZE]
 
   const MAXLAMBDA = (newtLen > MAXSTEPSIZE) ? 1 : MAXSTEPSIZE / newtLen
-  const MINLAMBDA = tolerance / relativeLength(p, current)
+  const MINLAMBDA = 1e-8
 
   let lambda = 1 // Step 9
   const initslope = directionalDerivative(p, current.gradient) // Step 6
@@ -137,17 +137,17 @@ export function lineSearch (current: TowerOfDerivatives, maxStepSize: number, to
   let trial: TowerOfDerivatives = current
   let newslope = 0
   let previous: LineSearchCoordinate | undefined
+
   do {
     trial = nextEstimate(lambda) // step 10.1, 10.2,
-    console.log(trial)
     if (isAlphaConditionSatisfied(trial.value, fc, initslope, lambda)) {
-      console.log('Alpha is satisfied')
+      console.log('ALPHA SAT')
       // *********************
       // STEP 10.3a
       // *********************
       newslope = directionalDerivative(p, trial.gradient)
       if (isBetaConditionSatisfied(newslope, initslope)) {
-        console.log('EXIT A')
+        console.log('BETA SAT')
         return successful(lambda, trial)
       }
       if (lambda === 1 && newtLen < MAXSTEPSIZE) {
@@ -171,7 +171,7 @@ export function lineSearch (current: TowerOfDerivatives, maxStepSize: number, to
           ? [previous, trialCoord] : [trialCoord, previous]
 
         let diff: number = Math.abs(hi.stepSize - lo.stepSize)
-        while (diff >= MINLAMBDA && !isBetaConditionSatisfied(newslope, initslope)) {
+        while (diff >= MINLAMBDA && !isBetaConditionSatisfied(newslope, initslope)) { // step 10.3.2.4U
           const lambdaIncr = Math.max(
             -(newslope * diff * diff) / (2 * (hi.tower.value - (lo.tower.value + newslope * diff))),
             0.2 * diff)
@@ -189,19 +189,16 @@ export function lineSearch (current: TowerOfDerivatives, maxStepSize: number, to
           }
         }
         if (isBetaConditionSatisfied(newslope, initslope)) {
-          console.log('EXIT B')
+          console.log('BETA SAT')
           return successful(lambda, nextEstimate(lambda))
         } else {
-          console.log('EXIT C')
+          console.log('NOT SAT')
           return successful(lo.stepSize, lo.tower)
         }
       }
     } else if (lambda < MINLAMBDA) {
-      console.log('EXIT D')
-      console.log(lambda)
       return failure(0, current, StepStatus.STEPSIZE_TOO_SMALL)
     } else {
-      console.log('Alpha not satisfied but could be smaller')
       // STEP 10.3c
       let temp = lambda
       if (lambda === 1) {
@@ -212,13 +209,11 @@ export function lineSearch (current: TowerOfDerivatives, maxStepSize: number, to
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         temp = cubicInterpolation(lambda, initslope, current, trial, previous!)
         temp = Math.min(0.5 * lambda, temp)
-        console.log(temp)
       }
       previous = { tower: trial, stepSize: lambda }
       lambda = Math.max(0.1 * lambda, temp)
     }
     iteration++
   } while (iteration < MAXITERATIONS)
-  console.log('EXIT E')
   return failure(lambda, trial, StepStatus.BACKTRACKING_STEPS_EXCEEDED)
 }

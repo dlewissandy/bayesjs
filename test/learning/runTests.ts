@@ -6,7 +6,7 @@ import { PairedObservation } from '../../src/learning/Observation'
 export function runTest (network: { [x: string]: { levels: string[]; parents: string[]; potentialFunction?: FastPotential | undefined; distribution?: Distribution | undefined; cpt?: ICptWithParents | ICptWithoutParents | undefined } | { levels: string[]; parents: string[]; cpt?: ICptWithParents | ICptWithoutParents | undefined } }, sampleSize = 100000, tol = 0.001, learningRate = 1, maxIterations = 100) {
   const dataset: PairedObservation[] = new InferenceEngine(network).getRandomSample(sampleSize)
   describe('learnParameters', () => {
-    it('converges whis random dataset', () => {
+    it('converges with random dataset', () => {
       const engine = new InferenceEngine(network)
       const result = learnParameters(engine, dataset, learningRate, maxIterations, tol)
       expect(result.steps).toBeGreaterThan(0)

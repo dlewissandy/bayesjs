@@ -14,7 +14,7 @@ import { GroupedEvidence } from '../Observation'
 export function chiSqrDistance (prior: FastPotential, currentBest: FastPotential, parentPotentials: FastPotential, numberOfHeadLevels: number): number {
   return kahanSum(prior.map((q, i) => {
     const p = currentBest[i]
-    const pa = parentPotentials[parentIndex(i, numberOfHeadLevels)]
+    const pa = parentPotentials.length > 0 ? parentPotentials[parentIndex(i, numberOfHeadLevels)] : 1
     return pa * Math.pow(p - q, 2) / q
   }))
 }
