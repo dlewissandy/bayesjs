@@ -86,13 +86,14 @@ export function gradientDescentLineSearch (f: ObjectiveFunction, current: TowerO
   let i = 0
 
   for (i = 0; i < maxIterations; ++i) {
-    const pk = scale(tower.gradient, -1)
+    const pk = tower.descentDirection
     const result = lineSearch(f, pk, tower, stepSize)
     // eslint-disable-next-line prefer-destructuring
     stepSize = result.stepSize
     // eslint-disable-next-line prefer-destructuring
     tower = result.tower
     const gradSize = norm2(tower.gradient)
+    console.log(gradSize, stepSize)
 
     if ((stepSize === 0) || (gradSize < 1e-5)) break
   }

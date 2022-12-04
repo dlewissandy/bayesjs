@@ -19,15 +19,15 @@ function mkObjective (f: (x: FastPotential[]) => number, gradF: (x: FastPotentia
     // the hessian to make it safely negative definite.
     const { hessian: H, isApproximated } = approximateHessian(hessian)
     const direction = descentDirection(gradient, H)
-
+    const magnitude = norm2(direction)
     const result = {
       xs,
       value,
       gradient,
       hessian: H,
       hessianIsApproximate: isApproximated,
-      descentDirection: direction,
-      descentDirectionMagnitude: norm2(direction),
+      descentDirection: direction.map(ps => ps.map(p => p / magnitude)),
+      descentDirectionMagnitude: magnitude,
       directionalDerivative: directionalDerivative(direction, gradient),
     }
 
