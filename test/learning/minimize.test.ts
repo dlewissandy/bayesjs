@@ -1,15 +1,15 @@
 
 import { ObjectiveFunction } from '../../src/learning/objective-functions'
 import { cosineObjectiveFn, rootsObjectiveFn, cubicObjectiveFn } from './objectives'
-import { gradientDescentLineSearch } from '../../src/learning/optimize'
+import { minimize } from '../../src/learning/optimize'
 
 const runTest = (x0: number, converged: boolean, xfinal: number, yfinal: number, objectiveFn: ObjectiveFunction) => {
-  const tolerance = 1E-3
+  const tolerance = 2E-3
   const maxIterations = 100
   const xs0 = [[x0]]
   const initialTower = objectiveFn(xs0)
-  const result = gradientDescentLineSearch(objectiveFn, initialTower, maxIterations)
-  // expect(result.converged).toEqual(true)
+  const result = minimize(objectiveFn, initialTower, maxIterations)
+  expect(result.converged).toEqual(true)
   // verify that the required precision has been satisfied
   expect(result.value).toBeGreaterThan(yfinal - 0.001)
   expect(result.value).toBeLessThan(yfinal + 0.001)

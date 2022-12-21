@@ -1,6 +1,6 @@
 import { InferenceEngine, FastPotential } from '..'
 import { partition, equals } from 'ramda'
-import { removeFirstVariable, adjustZeroPotentials } from '../engines/util'
+import { removeFirstVariable } from '../engines/util'
 
 export type PairedObservation = { [name: string]: string }
 
@@ -58,14 +58,14 @@ export function sampleBasedAverages (engine: InferenceEngine, groups: GroupedEvi
   const numbersOfHeadLevels = names.map(name => engine.getLevels(name).length)
   const heads = groups.reduce((acc: FastPotential[], { evidence, frequency }) => {
     engine.setEvidence(evidence)
-    const potentials = names.map(name => engine.getJointDistribution([name], engine.getParents(name)).getPotentials()) as FastPotential[]
+    const potentials = names.map(name => engine.getJointDistribution([name, ...engine.getParents(name)], []).getPotentials()) as FastPotential[]
     const weightedPotentials = potentials.map((ps: FastPotential) => ps.map(p => p * frequency))
     if (acc.length === 0) return weightedPotentials
     return acc.map((ps, i) => ps.map((p, j) => p + weightedPotentials[i][j]))
   }, [])
   return heads.map((joint, i) => {
-    const xs: FastPotential = adjustZeroPotentials(joint, numbersOfHeadLevels[i])
-    const ps: FastPotential = removeFirstVariable(xs, numbersOfHeadLevels[i])
+    const xs: FastPotential = joint.map(p => p <= 0 ? 1E-16 : p)
+    const ps: FastPotential = removeFirstVariable(joint, numbersOfHeadLevels[i]).map(p => p <= 0 ? 1E-16 : p)
     return {
       joint: xs,
       parents: ps,

@@ -484,9 +484,9 @@ export function parentIndex (jointIndex: number, numberOfHeadLevels: number) {
  * message passing.
  */
 export function removeFirstVariable (innerPotential: FastPotential, numberOfHeadLevels: number): FastPotential {
-  const result = Array(Math.floor(innerPotential.length / numberOfHeadLevels)).fill(0)
-  innerPotential.forEach((p, i) => { result[parentIndex(i, numberOfHeadLevels)] += p })
-  return result
+  const result: number[][] = Array(Math.floor(innerPotential.length / numberOfHeadLevels)).fill([]).map(() => [])
+  innerPotential.forEach((p, i) => { result[parentIndex(i, numberOfHeadLevels)].push(p) })
+  return result.map(ps => kahanSum(ps))
 }
 
 /** Condition a potential function to remove any zero valued potentials.

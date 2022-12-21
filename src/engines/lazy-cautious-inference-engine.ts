@@ -46,7 +46,7 @@ export class LazyPropagationEngine implements IInferenceEngine {
   private _formulas: Formula[]
   private _connectedComponents: NodeId[][]
   private _separators: NodeId[][]
-  private _separatorPotentials: FormulaId[] =[]
+  private _separatorPotentials: FormulaId[] = []
 
   /** This function recursively clears the cached potentials starting from the given
    * formula id.   It terminates the recursion down any branch when it encounters
@@ -200,7 +200,7 @@ export class LazyPropagationEngine implements IInferenceEngine {
   }
 
   // Get all the evidence provided for the network
-  getAllEvidence= () => {
+  getAllEvidence = () => {
     const result: { [name: string]: string[]} = {}
     this.getVariables().forEach(name => {
       const ls: string[] | null = this.getEvidence(name)

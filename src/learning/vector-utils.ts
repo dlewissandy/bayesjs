@@ -14,6 +14,18 @@ export function norm2 (potentials: FastPotential[]): number {
   return Math.sqrt(kahanSum(potentials.map(ps => kahanSum(ps.map(p => p * p)))))
 }
 
+export function dot (a: FastPotential[], b: FastPotential[]) {
+  return kahanSum(a.map((ps, i) => kahanSum(ps.map((p, jk) => p * b[i][jk]))))
+}
+
+export function scale (value: FastPotential[], c: number): FastPotential[] {
+  return value.map(ps => ps.map(p => p * c))
+}
+
+export function weightedSum (v1: FastPotential[], w2: number, v2: FastPotential[]) {
+  return v1.map((ps, i) => ps.map((p, jk) => p + w2 * v2[i][jk]))
+}
+
 /** Compute the condition number for a Hessian matrix.   Larger
 * values for the condition number indicate that the matrix
 * can be inverted safely, while smaller numbers indicate
@@ -113,20 +125,18 @@ export function descentDirection (gradient: FastPotential[], hessian: FastPotent
  * */
 export function LagrangianMultipliers (gradient: FastPotential[], hessian: FastPotential[], numbersOfHeadLevels: number[]): FastPotential[] {
   const gammas: number[][] = []
-  const hessianInv = hessian.map(hs => hs.map(h => 1 / h))
+  const hessInv = hessian.map(ps => ps.map(p => 1 / p))
 
   // Compute the Lagragian multipliers.  These parameters ensure that
   // the sum of the CPT entries over each block of a CPT sum to unity.
-  gradient.forEach((grad, i) => {
-    const hess = hessianInv[i]
+  gradient.forEach((grad, variable) => {
     const gs: number[] = []
-    const n = numbersOfHeadLevels[i]
-    for (let jk = 0; jk < grad.length; jk += n) {
-      const gslice = grad.slice(jk, jk + n)
-      const hslice = hess.slice(jk, jk + n)
-      const numerator = kahanSum(gslice.map((g, k) => g * hslice[k]))
-      const denominator = kahanSum(hslice)
-      gs.push(numerator / denominator)
+    const direction: FastPotential[] = descentDirection(gradient, hessian)
+    const n = numbersOfHeadLevels[variable]
+    for (let block = 0; block < grad.length; block += n) {
+      const hslice = hessInv[variable].slice(block, block + n)
+      const dslice = direction[variable].slice(block, block + n)
+      gs.push(kahanSum(dslice) / kahanSum(hslice))
     }
     gammas.push(gs)
   })

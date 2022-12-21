@@ -25,15 +25,18 @@ export function objectiveFunction (groups: GroupedEvidence[], priors: FastPotent
   return function (xs: FastPotential[]) {
     // Exctract the information about the structure of the bayes network
     // from the engine.
+    const n = engine.getVariables().length
     engine.removeAllEvidence()
     const variableNames = engine.getVariables()
-    const currentParams: FastPotential[] = xs
+    const currentParams: FastPotential[] = xs.slice(0, n)
     const numbersOfHeadLevels: number[] = variableNames.map(name => engine.getLevels(name).length)
 
+    Object.assign(engine, { _potentials: currentParams })
     // Perform the probabilistic inferences using the engine.
     const ll = logLikelihood(engine, groups)
     const sampleAvgs = sampleBasedAverages(engine, groups)
-    const distance = kahanSum(priors.map((ps, i) => chiSqrDistance(ps, currentParams[i], sampleAvgs[i].parents, numbersOfHeadLevels[i])))
+    Object.assign(engine, { _potentials: priors })
+    const distance = kahanSum(engine.getVariables().map((_, i) => chiSqrDistance(priors[i], currentParams[i], sampleAvgs[i].parents, numbersOfHeadLevels[i])))
 
     // compute the various components of the tower of derivatives.
     const value = -(learningRate * ll - distance)
@@ -52,7 +55,9 @@ export function objectiveFunction (groups: GroupedEvidence[], priors: FastPotent
     // on-diagonal elements.   This reduces storage and also increases
     // computational efficiency.
     const hessian = sampleAvgs.map(({ joint, parents }, i) => joint.map((p, jk) => {
-      const result = -learningRate * p / Math.pow(currentParams[i][jk], 2) - parents[parentIndex(jk, numbersOfHeadLevels[i])] / priors[i][jk]
+      const result =
+        -learningRate * p / Math.pow(currentParams[i][jk], 2) -
+        parents[parentIndex(jk, numbersOfHeadLevels[i])] / priors[i][jk]
       return -result
     },
     ))
@@ -69,7 +74,7 @@ export function objectiveFunction (groups: GroupedEvidence[], priors: FastPotent
     // Compute the gradient for constrained optimization of the objective
     // function.   This is achieved by subtracting the Lagrangian multipliers
     // from each element of the unconstrained gradient.
-    const adjustedGradient = gradient.map((gs, i) => gs.map((g, jk) => g - gammas[i][parentIndex(jk, numbersOfHeadLevels[i])]))
+    const adjustedGradient = gradient.map((gs, i) => gs.map((g, jk) => g + gammas[i][parentIndex(jk, numbersOfHeadLevels[i])]))
 
     // Compute the quasi-newton ascent direction.   This is determined
     // by approximating the objective function as a second order Taylor
@@ -78,15 +83,14 @@ export function objectiveFunction (groups: GroupedEvidence[], priors: FastPotent
     // zero vector.
     const direction = descentDirection(adjustedGradient, H)
     const magnitude = norm2(direction)
-
     const result = {
-      xs: currentParams,
+      xs: currentParams.slice(0, n),
       value,
       gradient: adjustedGradient,
       hessian: H,
       hessianIsApproximate: isApproximated,
       descentDirection: direction.map(ps => ps.map(p => p / magnitude)),
-      descentDirectionMagnitude: magnitude,
+      descentDirectionMagnitude: 1,
       directionalDerivative: directionalDerivative(direction, gradient),
     }
     return result
