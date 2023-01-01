@@ -12,7 +12,7 @@ export type OptimizationResult = {
   message: string;
 }
 
-/** The constants for the WOlfe conditions.   These values are bsed on the
+/** The constants for the Wolfe conditions.   These values are bsed on the
  * recommendations by Nocedal and Wright for quasi-Newton descent directions.
  */
 const C1 = 1E-4
@@ -150,7 +150,7 @@ export function minimize (f: ObjectiveFunction, current: TowerOfDerivatives, max
     const pk = tower.descentDirection
     ;({ stepSize, tower } = lineSearch(f, pk, tower, stepSize))
     const gradSize = norm2(tower.gradient)
-    if (stepSize < 1E-16) {
+    if (stepSize < Number.EPSILON) {
       msg = 'SUCCESS: Could not find a better approximation than the current value'
       converged = true
       break

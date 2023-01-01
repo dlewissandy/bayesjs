@@ -13,6 +13,6 @@
     "strict": true,
     "noImplicitAny": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "test/learning/sudsaway.test.bak", "test/learning/alarm.test.ts", "test/learning/sprinkler.test.bak", "test/learning/huge.test.bak"],
+  "include": ["src/**/*.ts", "test/**/*.ts", "test/learning/sudsaway.test.bak", "test/learning/alarm.test.ts", "test/learning/sprinkler.test.ts", "test/learning/huge.test.ts"],
   "exclude": ["node_modules", "**/*.spec.ts", "dist"]
 }

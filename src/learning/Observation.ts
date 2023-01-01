@@ -64,8 +64,8 @@ export function sampleBasedAverages (engine: InferenceEngine, groups: GroupedEvi
     return acc.map((ps, i) => ps.map((p, j) => p + weightedPotentials[i][j]))
   }, [])
   return heads.map((joint, i) => {
-    const xs: FastPotential = joint.map(p => p <= 0 ? 1E-16 : p)
-    const ps: FastPotential = removeFirstVariable(joint, numbersOfHeadLevels[i]).map(p => p <= 0 ? 1E-16 : p)
+    const xs: FastPotential = joint.map(p => p <= 0 ? Number.EPSILON : p)
+    const ps: FastPotential = removeFirstVariable(joint, numbersOfHeadLevels[i]).map(p => p <= 0 ? Number.EPSILON : p)
     return {
       joint: xs,
       parents: ps,
