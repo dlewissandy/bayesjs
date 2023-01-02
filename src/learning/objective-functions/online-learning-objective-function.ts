@@ -39,14 +39,14 @@ export function objectiveFunction (groups: GroupedEvidence[], priors: FastPotent
     const distance = kahanSum(engine.getVariables().map((_, i) => chiSqrDistance(priors[i], currentParams[i], sampleAvgs[i].parents, numbersOfHeadLevels[i])))
 
     // compute the various components of the tower of derivatives.
-    const value = -(learningRate * ll - distance)
+    const value = -(learningRate * ll - (1 - learningRate) * distance)
 
     // The gradient computed here is the "unconstrained" gradient.   It
     // does not ensure that the result of taking a step will fall on the
     // constraint surface ( e.g. blocks of every CPT add to unity ).
     const gradient = sampleAvgs.map(({ joint, parents }, i) => joint.map((p, jk) => {
       const result = learningRate * p / currentParams[i][jk] -
-        parents[parentIndex(jk, numbersOfHeadLevels[i])] * (currentParams[i][jk] - priors[i][jk]) / priors[i][jk]
+        (1 - learningRate) * parents[parentIndex(jk, numbersOfHeadLevels[i])] * (currentParams[i][jk] - priors[i][jk]) / priors[i][jk]
       return -result
     },
     ))
@@ -57,7 +57,7 @@ export function objectiveFunction (groups: GroupedEvidence[], priors: FastPotent
     const hessian = sampleAvgs.map(({ joint, parents }, i) => joint.map((p, jk) => {
       const result =
         -learningRate * p / Math.pow(currentParams[i][jk], 2) -
-        parents[parentIndex(jk, numbersOfHeadLevels[i])] / priors[i][jk]
+        (1 - learningRate) * parents[parentIndex(jk, numbersOfHeadLevels[i])] / priors[i][jk]
       return -result
     },
     ))

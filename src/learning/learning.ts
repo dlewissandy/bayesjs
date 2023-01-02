@@ -39,7 +39,7 @@ export function learnParameters (engine: InferenceEngine, data: PairedObservatio
   const throwErr = (reason: string) => { throw new Error(`Cannot update Bayes network. ${reason}`) }
   if (data.length === 0) throwErr('no paired observations were provided')
   if (data.some((x: Record<string, string>) => Object.keys(x).length === 0)) throwErr('Dataset contains vacuous observations')
-  if (learningRate <= 0 || learningRate >= 2) throwErr('The learning rate must be between 0 and 2')
+  if (learningRate <= 0 || learningRate >= 1) throwErr('The learning rate must be between 0 and 1')
   if (maxIterations < 0) throwErr('The maximum iterations must be positive')
   if (tolerance < Number.EPSILON || tolerance > 1) throwErr('The tolerance must be between 0 and 1.')
 
