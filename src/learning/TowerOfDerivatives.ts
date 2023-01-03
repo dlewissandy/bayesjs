@@ -10,14 +10,13 @@ export type TowerOfDerivatives = {
    * values.   Since this is a diagonal matrix, we store it using the same indexing
    * scheme as the parameters */
   hessian: number[][];
-  /** The condition number for the Hessian matrix.   Larger condition numbers indicate
-   * that the matrix is better conditioned that smaller condition numbers. */
-  conditionNumber: number;
-  /** The Newton or quasi-Newton ascent direction from the current set of parameters. */
-  ascentDirection: number[][];
-  /** The magnitude (l2 norm) of the ascent direction */
-  ascentDirectionMagnitude: number;
-  /** The directional derivative at the current set of coordinates.   For an ascent
+  /** true if the hessian was not safely positive definite.   An approximator is returned. */
+  hessianIsApproximate: boolean;
+  /** The Newton or quasi-Newton descent direction from the current set of parameters. */
+  descentDirection: number[][];
+  /** The magnitude (l2 norm) of the descent direction */
+  descentDirectionMagnitude: number;
+  /** The directional derivative at the current set of coordinates.   For an descent
    *direction, the directional derivative should be positive. */
   directionalDerivative: number;
 }

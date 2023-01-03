@@ -14,6 +14,18 @@ export function norm2 (potentials: FastPotential[]): number {
   return Math.sqrt(kahanSum(potentials.map(ps => kahanSum(ps.map(p => p * p)))))
 }
 
+export function dot (a: FastPotential[], b: FastPotential[]) {
+  return kahanSum(a.map((ps, i) => kahanSum(ps.map((p, jk) => p * b[i][jk]))))
+}
+
+export function scale (value: FastPotential[], c: number): FastPotential[] {
+  return value.map(ps => ps.map(p => p * c))
+}
+
+export function weightedSum (v1: FastPotential[], w2: number, v2: FastPotential[]) {
+  return v1.map((ps, i) => ps.map((p, jk) => p + w2 * v2[i][jk]))
+}
+
 /** Compute the condition number for a Hessian matrix.   Larger
 * values for the condition number indicate that the matrix
 * can be inverted safely, while smaller numbers indicate
@@ -26,17 +38,23 @@ export function norm2 (potentials: FastPotential[]): number {
 *   on diagonal elements of the Hessian.
 */
 export function conditionNumber (hessian: FastPotential[]): { number: number; max: number; min: number } {
-  let mx = 0
+  let mx = -Infinity
   let mn = Infinity
   hessian.forEach(hs => hs.forEach(h => {
-    mx = Math.max(mx, Math.abs(h))
-    mn = Math.min(mn, Math.abs(h))
+    mx = Math.max(mx, h)
+    mn = Math.min(mn, h)
   }))
   return {
-    number: mn / mx,
+    number: Math.min(Math.abs(mn), Math.abs(mx)) / Math.max(Math.abs(mx), Math.abs(mn)),
     max: mx,
     min: mn,
   }
+}
+
+export function directionalDerivative (direction: FastPotential[], gradient: FastPotential[]): number {
+  return kahanSum(gradient.map((gs, i) =>
+    kahanSum(gs.map((g, jk) => g * direction[i][jk])),
+  ))
 }
 
 /** Given a Hessian matrix, determine if it is ill conditioned.   If it is
@@ -48,29 +66,36 @@ export function conditionNumber (hessian: FastPotential[]): { number: number; ma
  *   representation because the Hessian matrix will always be diagonal
  *   for this objective function.
  */
-export function approximateHessian (hessian: FastPotential[]): { hessian: FastPotential[]; conditionNumber: number; mu: number} {
-  const { number, max, min } = conditionNumber(hessian)
-  if (number > SQRTEPS) {
-    // If the matrix is safely negative definite, then return the
-    // original matrix
-    return {
-      hessian,
-      conditionNumber: number,
-      mu: 0,
-    }
-  } else {
-    // otherwise, add a small amount to each diagonal element of
-    // the matrix so that it is well conditioned.
-    const mu = 2 * (max - min) * SQRTEPS - min
-    return {
-      hessian: hessian.map((hs) => hs.map(h => h - mu)),
-      conditionNumber: number,
-      mu,
-    }
+export function approximateHessian (hessian: FastPotential[]): { hessian: FastPotential[]; isApproximated: boolean; mu: number} {
+  let { max: maxdiag, min: mindiag } = conditionNumber(hessian)
+  const maxPosDiag = Math.max(maxdiag, 0)
+  let mu = 0
+  if (mindiag <= maxPosDiag * CUBEROOTEPS) {
+    mu = 2 * (maxPosDiag - mindiag) * CUBEROOTEPS - mindiag
+    maxdiag = maxdiag + mu
+  }
+  const maxoff = 0
+  if (maxoff * (1 + 2 * CUBEROOTEPS) > maxdiag) {
+    mu = mu + (maxoff - maxdiag) + 2 * CUBEROOTEPS * maxoff
+    maxdiag = maxoff * (1 + 2 * CUBEROOTEPS)
+  }
+  if (maxdiag < CUBEROOTEPS) {
+    // H == [0..]
+    mu = 1
+    maxdiag = 1
+  }
+  const H = (mu > 0)
+    ? hessian.map(hs => hs.map(h => h + mu))
+    : hessian
+
+  return {
+    hessian: H,
+    isApproximated: mu > 0,
+    mu,
   }
 }
 
-/** Compute the ascent direction for a given tower of derivatives of
+/** Compute the descent direction for a given tower of derivatives of
  * the objective function.   If the Hessian is safely negative
  * definite, then return the Newton direction, otherwise return
  * the quasi-Newton direction.   As a side effect, return the
@@ -79,12 +104,12 @@ export function approximateHessian (hessian: FastPotential[]): { hessian: FastPo
  * @param numbersOfHeadLevels: The number of levels for each
  *   variable in the Bayes network.
  * */
-export function ascentDirection (gradient: FastPotential[], hessian: FastPotential[]): FastPotential[] {
+export function descentDirection (gradient: FastPotential[], hessian: FastPotential[]): FastPotential[] {
   const hessianInv = hessian.map(hs => hs.map(h => 1 / h))
 
   // Compute the ascent direction.
   const direction = hessianInv.map((hs, i) => hs.map((h, jk) =>
-    h * gradient[i][jk]),
+    -h * gradient[i][jk]),
   )
 
   return direction
@@ -100,23 +125,20 @@ export function ascentDirection (gradient: FastPotential[], hessian: FastPotenti
  * */
 export function LagrangianMultipliers (gradient: FastPotential[], hessian: FastPotential[], numbersOfHeadLevels: number[]): FastPotential[] {
   const gammas: number[][] = []
-  const hessianInv = hessian.map(hs => hs.map(h => 1 / h))
+  const hessInv = hessian.map(ps => ps.map(p => 1 / p))
 
   // Compute the Lagragian multipliers.  These parameters ensure that
   // the sum of the CPT entries over each block of a CPT sum to unity.
-  gradient.forEach((grad, i) => {
-    const hess = hessianInv[i]
+  gradient.forEach((grad, variable) => {
     const gs: number[] = []
-    const n = numbersOfHeadLevels[i]
-    for (let jk = 0; jk < grad.length; jk += n) {
-      const gslice = grad.slice(jk, jk + n)
-      const hslice = hess.slice(jk, jk + n)
-      const numerator = kahanSum(gslice.map((g, k) => g * hslice[k]))
-      const denominator = kahanSum(hslice)
-      gs.push(numerator / denominator)
+    const direction: FastPotential[] = descentDirection(gradient, hessian)
+    const n = numbersOfHeadLevels[variable]
+    for (let block = 0; block < grad.length; block += n) {
+      const hslice = hessInv[variable].slice(block, block + n)
+      const dslice = direction[variable].slice(block, block + n)
+      gs.push(kahanSum(dslice) / kahanSum(hslice))
     }
     gammas.push(gs)
   })
-
   return gammas
 }

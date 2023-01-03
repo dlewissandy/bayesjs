@@ -14,7 +14,7 @@ import { GroupedEvidence } from '../Observation'
 export function chiSqrDistance (prior: FastPotential, currentBest: FastPotential, parentPotentials: FastPotential, numberOfHeadLevels: number): number {
   return kahanSum(prior.map((q, i) => {
     const p = currentBest[i]
-    const pa = parentPotentials[parentIndex(i, numberOfHeadLevels)]
+    const pa = parentPotentials.length > 0 ? parentPotentials[parentIndex(i, numberOfHeadLevels)] : 1
     return pa * Math.pow(p - q, 2) / q
   }))
 }
@@ -46,12 +46,12 @@ export function logLikelihood (engine: InferenceEngine, groups: GroupedEvidence[
  * @param engine - the inference engine for a Bayes Network in which the
  *   variable occurs
  */
-export function localDistributionPotentials (name: string, engine: InferenceEngine) {
+export function localDistributionPosteriorPotentials (name: string, engine: InferenceEngine) {
   // Request the local distribution from the engine.  The potentials of the
   // local distribution are stored as the joint over the head and
   // parent variables, but because they are consistent, we can use these
   // to reconstruct the conditional distribution.
-  const dist = engine.getJointDistribution([name], engine.getParents(name))
+  const dist = engine.getPosteriorDistribution(name)
   const numberOfHeadLevels = dist.getHeadVariable(name).levels.length
   const joint = dist.getPotentials()
 
