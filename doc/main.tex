@@ -1,0 +1,303 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{mathtools}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{thmtools}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{stmaryrd}
+\usepackage{footmisc}
+\usepackage{mathrsfs}
+
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=teal,urlcolor=blue}
+
+\title{Symbolic\textemdash Operational Separation for Lazy Probabilistic Inference in Bayesian Networks}
+\author{Anonymous Draft}
+\date{\today}
+
+% Theorem-like environments
+\declaretheorem[name=Definition,style=definition]{definition}
+\declaretheorem[name=Lemma]{lemma}
+\declaretheorem[name=Theorem]{theorem}
+\declaretheorem[name=Corollary]{corollary}
+\declaretheorem[name=Proposition]{proposition}
+\declaretheorem[name=Example,style=definition]{example}
+\declaretheorem[name=Remark,style=remark]{remark}
+
+% Macros
+\newcommand{\Var}{\mathsf{Var}}
+\newcommand{\Dom}{\mathsf{Dom}}
+\newcommand{\Levels}{\mathsf{Lev}}
+\newcommand{\Assign}{\mathsf{Assign}}
+\newcommand{\Pa}{\mathsf{Pa}}
+\newcommand{\Pot}{\mathsf{Pot}}
+\newcommand{\Id}{\mathsf{Id}}
+\newcommand{\BN}{\mathsf{BN}}
+\newcommand{\ev}{\varepsilon}
+\newcommand{\Evidence}{\mathcal{E}}
+\newcommand{\cC}{\mathcal{C}}
+\newcommand{\cS}{\mathcal{S}}
+\newcommand{\cF}{\mathcal{F}}
+\newcommand{\cD}{\mathcal{D}}
+\newcommand{\cN}{\mathcal{N}}
+\newcommand{\cJ}{\mathcal{J}}
+\newcommand{\given}{\,\middle|\,}
+\newcommand{\norm}[1]{\lVert #1\rVert}
+\newcommand{\abs}[1]{\lvert #1\rvert}
+% Avoid conflict with existing \Ref (hyperref capitalized variant)
+\newcommand{\fref}[1]{\operatorname{ref}(#1)}
+\newcommand{\Prod}{\operatorname{\Pi}}
+\newcommand{\Marg}[2]{\Sigma_{#1}(#2)}
+\newcommand{\Unit}{\mathbf{1}}
+\newcommand{\Potf}{\Phi}
+\newcommand{\Evid}{\epsilon}
+\newcommand{\Den}[1]{\llbracket #1\rrbracket}
+% Removed \Join macro (unused)
+\newcommand{\Msg}[2]{\Psi(#1,#2)}
+
+% EBNF environment (simple)
+\lstdefinelanguage{EBNF}{
+	morekeywords={network,node,levels,parents,cpt,potential},
+	sensitive=true,
+	morecomment=[l]{//},
+	morecomment=[s]{/*}{*/},
+	morestring=[b]'% use single quote to avoid straight double quote warning
+}
+\lstset{basicstyle=\ttfamily\small,keywordstyle=\color{blue},commentstyle=\color{gray!70},stringstyle=\color{red!70!black},columns=fullflexible}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We present a symbolic message-passing and lazy evaluation framework for exact inference in discrete Bayesian networks. The approach separates (i) a finite algebra of potential expressions (syntax) from (ii) their numerical realization (semantics). This enables: (a) one-time construction of a formula directed acyclic graph encoding posterior clique and marginal factors; (b) demand-driven evaluation with local normalization; (c) fine-grained cache invalidation upon evidence retraction or local distribution replacement; and (d) specialized joint probability evaluation spanning multiple cliques. We formalize the grammar, well-formedness constraints, denotational and operational semantics (including a cache transition system), and sketch soundness, completeness, normalization invariance, and locality properties.
+\end{abstract}
+
+\section{Introduction}
+Exact inference in Bayesian networks via junction trees usually mixes two concerns: symbolic structuring (factor graph transformations) and numerical table computations. Changes in hard/soft evidence or local conditional distributions commonly force broad recomputation. We advocate a separation: a \emph{symbolic propagation} phase constructs a reusable formula DAG; a \emph{lazy evaluator} realizes numeric potentials only when queried. Cache entries are invalidated minimally upon structural or evidential changes.
+
+\paragraph{Contributions.} (1) A concise algebra of formula constructors (product, marginalization, unit, evidence indicator, node prior, reference) with normalization-preserving semantics. (2) Symbolic junction-tree style propagation producing message and posterior formulas independent of concrete evidence values. (3) Demand-driven evaluation with recursive cache invalidation bounded to dependency subgraphs. (4) A hybrid strategy for multi-clique joint queries that retracts and restores evidence only when required. (5) Formalization of syntax, semantics, and correctness properties.
+
+\section{Related Work}
+Lazy propagation \cite{madsen1999lazy} separates message structure from evaluation but typically still materializes intermediate numeric tables under new evidence. Arithmetic circuits / compiled representations (e.g. \cite{darwiche2003differential}) precompile global structures; our approach constructs a lightweight runtime formula DAG without global elimination ordering compilation. AND/OR search spaces, factor caching, and lifted inference are complementary techniques.
+
+\section{Syntax}
+\subsection{Basic Sets}
+Let $\Var$ be a finite set of variables. Each $X\in\Var$ has a finite domain $\Dom(X)=\{x_0,\dots,x_{k-1}\}$; define $\Levels(X)=\{0,\dots,k-1\}$. For $S\subseteq \Var$, $\Assign(S)=\prod_{X\in S} \Dom(X)$.
+
+Formula identifiers form a finite prefix of $\mathbb{N}$ denoted $\Id$.
+
+% (Obsolete initial monolithic grammar removed in favor of layered presentation below.)
+
+\paragraph{CPT Semantics.} A \texttt{CPT} enumerates one row per distinct assignment to the parent variables. For a node $X$ with parent set $P=\{Y_1,\dots,Y_m\}$, let $R = \prod_{i=1}^m |\Dom(Y_i)|$. The CPT must contain exactly $R$ entries; each \texttt{Condition} lists assignments whose variables cover $P$ exactly once (order immaterial). Each corresponding \texttt{ProbVector} has length $|\Dom(X)|$ and sums to $1$. If a \texttt{PotentialSpec} is given instead of a \texttt{CPT}, it supplies either (i) an unconditional prior (no parents) or (ii) a total function mapping $\Assign(\{X\}\cup P)$ to $[0,1]$ normalized per parent assignment.
+
+\subsection{Domain Function and Size}
+Define $\mathrm{dom}(F)$ recursively:
+\begin{align*}
+\mathrm{dom}(\Potf(X)) &= \{X\}\cup \Pa(X), & \mathrm{dom}(\Evid(X)) &= \{X\},\\
+\mathrm{dom}(\Prod(F_1,\dots,F_n)) &= \bigcup_i \mathrm{dom}(F_i), & \mathrm{dom}(\Sigma_S(F)) &= S\cap \mathrm{dom}(F),\\
+\mathrm{dom}(\fref{i}) &= \mathrm{dom}(F_i), & \mathrm{dom}(\Unit) &= \emptyset.
+\end{align*}
+Let $\vec{k}_F$ be the vector of $|\Dom(X)|$ in the order induced by $\mathrm{dom}(F)$. Define $|F| = \prod \vec{k}_F$ with $|\Unit|=1$.
+
+\subsection{Grammar (EBNF)}
+We now introduce the concrete grammar used for (i) declaring a Bayesian network, (ii) stating queries and evidence, and (iii) representing the internal symbolic formulas that the system constructs. Rather than presenting one monolithic block, we proceed fragment by fragment. For each fragment we first describe in prose what problem it solves and what design choices constrain its shape; then we give the EBNF productions; finally we justify the well-formedness side conditions that (for readability) appear as comments inside the grammar. This sequencing parallels how a user (or an implementation) incrementally acquires the necessary concepts: characters and tokens first, then collections and assignments, then conditional structure, and so forth, culminating in the compiled algebra.
+
+\subsubsection{Lexical Primitives}
+The lexical layer introduces the smallest building blocks. An \texttt{Identifier} is the syntactic unit from which we draw both variable names and the names of their discrete levels. We intentionally do not create distinct token categories (e.g. \texttt{VarId} vs. \texttt{LevelId}); instead, the role of an identifier is determined later by the context in which it appears (a level list versus a node declaration head). This uniformity simplifies parsing and later allows lightweight transformations that operate uniformly over identifiers without tracking their categories until semantic validation. Integer literals furnish a supply of natural numbers used principally for formula identifiers (references), while real literals stand for probability masses. We restrict real literals (syntactically) to the closed unit interval so that malformed probabilities (e.g. negative numbers) can be rejected at parse time rather than after partial semantic construction.
+\begin{lstlisting}[language=EBNF]
+Identifier       ::= /* letter (letter | digit | '_' )* (non-empty) */
+Var              ::= Identifier
+Level            ::= Identifier
+IntegerLiteral   ::= /* non-negative integer */
+RealLiteral      ::= /* decimal in [0,1] inclusive */
+Probability      ::= RealLiteral  (* intended in [0,1] *)
+\end{lstlisting}
+The non-emptiness requirement and restricted character class ensure that identifiers cannot be confused with delimiters or punctuation tokens, keeping later pretty-printing unambiguous. The probability annotation communicates a contract: subsequent grammar fragments may assume probabilities are already range-checked, which simplifies semantic rules for normalization.
+
+\subsubsection{Collections, Assignments, Distributions}
+The next fragment groups identifiers into ordered finite collections and introduces partial assignments and basic probability tables. A \texttt{LevelList} fixes the finite domain of a variable; a \texttt{VarList} collects distinct variable names (distinctness assures that the product space we form from their domains is well-defined without duplicate dimensions). \texttt{VarListOpt} allows an explicit empty parent list so that the absence of parents is syntactically visible rather than implicit. An \texttt{Assignment} binds a single variable to one of its declared levels. A \texttt{Condition} is a finite set of such bindings and will later serve as the left-hand side key of a CPT row. Finally, a \texttt{ProbVector} encodes the categorical distribution over a variable conditioned on its parents (or an unconditional prior when there are no parents). The side comment “sums to 1” flags a semantic check: the vector's entries must sum exactly to one so that the vector denotes a normalized probability distribution.
+\begin{lstlisting}[language=EBNF]
+LevelList        ::= "[" Level { "," Level } "]"        (* distinct levels *)
+ProbVector       ::= "[" Probability { "," Probability } "]"  (* sums to 1 *)
+VarList          ::= "[" Var { "," Var } "]"              (* distinct *)
+VarListOpt       ::= "[" [ Var { "," Var } ] "]"
+Assignment       ::= Var "=" Level
+Condition        ::= "{" [ Assignment { "," Assignment } ] "}"  (* covers parent set when in CPT *)
+\end{lstlisting}
+Requiring distinct elements in all lists prevents a later evaluation routine from encountering the same dimension twice (which would force ad hoc disambiguation rules). Mandating that a \texttt{Condition} appearing in a CPT (next fragment) covers each parent exactly once ensures the CPT behaves as a total function from parent assignments to distributions, eliminating the possibility of partial or conflicting entries.
+
+\subsubsection{CPTs and Potentials}
+This fragment provides two alternative mechanisms for supplying a node's local conditional distribution. A \texttt{CPT} explicitly lists (row by row) the conditional distribution of a child variable for every complete assignment to its parents. A \texttt{PotentialSpec} gives either an unconditional prior distribution for a parentless node or a reference to an external (possibly procedural) potential function together with the exact list of variables on which it depends. The function form makes it possible to integrate non-tabular or deferred distributions (e.g., ones computed on demand) while still letting the symbolic layer reason about domains.
+\begin{lstlisting}[language=EBNF]
+CptEntry         ::= Condition "->" ProbVector     (* |ProbVector| = |Dom(child)| *)
+CPT              ::= "{" CptEntry { "," CptEntry } "}"
+PotentialSpec    ::= "prior" "(" ProbVector ")"
+				   | "function" "(" VarList ")"   (* external symbolic potential *)
+\end{lstlisting}
+Each conditional entry must (semantically) appear exactly once: if any parent assignment were missing the local conditional would be undefined for that configuration; if a parent assignment appeared twice evaluation would be ambiguous. The probability vector length check enforces arity alignment between the declared domain of the child and its row; without this, later table multiplications could mismatch dimensions silently. For function potentials, the explicit variable list makes the domain of the resulting symbolic formula decidable without executing the function body; this is essential for static construction of product and marginal operations.
+
+\subsubsection{Nodes and Network}
+Here we scale from local specifications to the whole structure. A \texttt{NodeDecl} associates a variable with its domain (level list), an explicit list of parent variables (possibly empty), and an optional specification of how its conditional distribution is supplied (either a CPT or a potential). The surrounding \texttt{Network} production gathers a finite set of such declarations. The order among declarations is not semantically significant, but an implementation may exploit declaration order to perform early validation (e.g., ensuring that referenced parents have been declared).
+\begin{lstlisting}[language=EBNF]
+NodeDecl         ::= "node" Var ":" "levels" "=" LevelList
+					 "parents" "=" VarListOpt
+					 ( "cpt" "=" CPT | "potential" "=" PotentialSpec )?
+Network          ::= "network" "{" NodeDecl { NodeDecl } "}"
+\end{lstlisting}
+By centralizing level list declarations we guarantee one authoritative domain for each variable, which the semantic layer uses when allocating factor tables. Allowing a node declaration without an immediate CPT/potential supports workflows where structure learning precedes parameter estimation. A separate acyclicity check (not encoded directly in the context-free grammar) ensures the declared parent relation defines a DAG so that the global joint factorization exists.
+
+
+\begin{example}[Asia network CPT encoding]
+Consider the well-known Asia network fragment with variables \texttt{Smoker} and \texttt{LungCancer}. In code (see the provided implementation), \texttt{Smoker} is a parentless binary variable with levels $[T,F]$ and prior $P(\texttt{Smoker}=T)=0.5$. \texttt{LungCancer} has parent \texttt{Smoker} and conditional probabilities $P(\texttt{LungCancer}=T\mid \texttt{Smoker}=T)=0.1$ and $P(\texttt{LungCancer}=T\mid \texttt{Smoker}=F)=0.01$. Using the grammar, a minimal network fragment specifying just these two nodes can be written:
+\begin{lstlisting}[language=EBNF]
+network {
+	node Smoker : levels = [T,F]
+				parents = []
+				cpt = { {} -> [0.5,0.5] }
+
+	node LungCancer : levels = [T,F]
+				parents = [Smoker]
+				cpt = {
+					{Smoker=T} -> [0.1,0.9],   // P(LungCancer=T|Smoker=T)=0.1
+					{Smoker=F} -> [0.01,0.99]  // P(LungCancer=T|Smoker=F)=0.01
+				}
+}
+\end{lstlisting}
+Interpretation details:
+\begin{itemize}[leftmargin=1.4em]
+	\item The level order $[T,F]$ fixes the ordering of entries in each probability vector; thus $[0.1,0.9]$ means $P(T)=0.1$, $P(F)=0.9$ for \texttt{LungCancer} given the stated parent assignment.
+	\item The empty condition (\texttt{\{\}}) row for \texttt{Smoker} is permissible because there are no parents; it supplies an unconditional prior.
+	\item Each parent assignment to \texttt{Smoker} appears exactly once in the \texttt{LungCancer} CPT ensuring totality; vectors have length two matching the declared domain of \texttt{LungCancer}.
+	\item If we were to reorder the level list (e.g. $[F,T]$) all probability vectors would have to be reordered correspondingly; keeping the level order explicit prevents ambiguity and makes parsing deterministic.
+\end{itemize}
+This concrete instance demonstrates how the syntactic constraints (distinct levels, exhaustive parent coverage, matching vector length) manifest in an actual specification and prepares the reader for richer multi-parent examples (e.g. \texttt{Dyspnea}) handled analogously.
+\end{example}
+
+
+\subsubsection{Events and Evidence}
+The query fragment gives surface syntax for probabilistic questions and observations. An \texttt{Event} specifies, for a finite set of variables, a non-empty subset of admissible levels for each; probabilistically it denotes the disjunction over all full assignments consistent with those per-variable constraints. \texttt{Evidence} uses the same shape to describe observed information (hard evidence when the subset is a singleton; soft evidence when the subset contains multiple levels to be interpreted later as an indicator or likelihood vector). Designing a uniform shape for both events and evidence reduces cognitive load and lets later algorithms share inspection logic.
+\begin{lstlisting}[language=EBNF]
+Event            ::= "{" EventItem { "," EventItem } "}"   (* disjoint vars *)
+EventItem        ::= Var ":" "[" Level { "," Level } "]"   (* non-empty subset *)
+Evidence         ::= "{" EvidenceItem { "," EvidenceItem } "}"
+EvidenceItem     ::= Var ":" "[" Level { "," Level } "]"
+\end{lstlisting}
+Requiring that each variable occur at most once forbids contradictory constraints (e.g. giving two different level subsets for the same variable). Prohibiting empty subsets avoids implicitly encoding impossible events (probability zero) unless the user chooses to represent that explicitly by omitting the variable or by downstream mechanisms.
+
+\subsubsection{Compiled Formula Language}
+Finally we present the internal algebra that the symbolic construction phase generates. Users do not author these forms directly; rather, they are produced deterministically from the network structure and the current evidence. The constructors are deliberately minimal: a unit (scalar) factor; primitive node potentials; evidence indicator functions; products representing factor multiplication; marginals representing summation (projection) onto a retained set of variables; and references that allow sharing and DAG reuse. Minimality makes it feasible to prove properties such as normalization invariance and locality by structural induction, since there are few cases to consider.
+\begin{lstlisting}[language=EBNF]
+Formula          ::= Unit | NodePotential | EvidenceFunction
+				   | Product | Marginal | Reference
+Unit             ::= "1"
+NodePotential    ::= "PHI(" Var ")"
+EvidenceFunction ::= "EPS(" Var ")"
+Reference        ::= "ref(" Fid ")"
+Product          ::= "PI(" Formula { "," Formula } ")"     (* n >= 2 after simplification *)
+Marginal         ::= "SIGMA{" VarList "}(" Formula ")"     (* retains listed vars *)
+Fid              ::= IntegerLiteral
+\end{lstlisting}
+Imposing (by a smart constructor) that a product with only one non-unit child is simplified to that child yields a canonical shape and reduces the branching needed in proofs and algorithms. Restricting references to already constructed formulas ensures the overall graph is acyclic, which is vital for termination of both evaluation and cache invalidation passes. Marginal nodes retain exactly the listed variables; if that list equals the child's domain the node simplifies away, maintaining a reduced normal form.
+
+\paragraph{Global Well-Formedness.} Collecting the constraints across fragments: (1) list distinctness (levels, variables) guarantees unambiguous correspondence between positions in multi-dimensional tables and variable names, eliminating potential double counting; (2) probability vectors summing to one ensure each local specification truly denotes a distribution, which is necessary for later proofs that normalization is preserved under our evaluation rules; (3) CPT exhaustiveness and uniqueness ensure the local conditional is a total function, preventing undefined or conflicting probabilities; (4) function potentials declare explicit support so the domain of any composed formula can be computed without executing opaque code; (5) event and evidence variable disjointness avoids contradictory constraints and keeps probability summations straightforward; (6) canonical product arity (no unary products after simplification) shrinks the structural induction space and allows concise complexity bounds; (7) marginal nodes that would be vacuous (retain every variable) are eliminated to keep the DAG minimal; (8) reference acyclicity provides a topological evaluation order and guarantees termination of invalidation; (9) network acyclicity (checked separately) ensures the joint factorization matches Bayesian semantics. Together these properties yield a grammar whose derivations always correspond to evaluable, normalizable probability expressions with predictable locality characteristics.
+
+\subsection{Domain Function and Size}
+Define $\mathrm{dom}(F)$ recursively:
+\begin{align*}
+\mathrm{dom}(\Potf(X)) &= \{X\}\cup \Pa(X), & \mathrm{dom}(\Evid(X)) &= \{X\},\\
+\mathrm{dom}(\Prod(F_1,\dots,F_n)) &= \bigcup_i \mathrm{dom}(F_i), & \mathrm{dom}(\Sigma_S(F)) &= S\cap \mathrm{dom}(F),\\
+\mathrm{dom}(\fref{i}) &= \mathrm{dom}(F_i), & \mathrm{dom}(\Unit) &= \emptyset.
+\end{align*}
+Let $\vec{k}_F$ list $|\Dom(X)|$ for $X$ in $\mathrm{dom}(F)$; define $|F|=\prod \vec{k}_F$ with $|\Unit|=1$.
+
+\subsection{Symbolic Construction}\label{sec:symbolic-construction}
+This phase traverses a junction tree (or clique graph) performing a symbolic variant of message passing. Each posterior clique potential and each inter-clique message is represented as a formula DAG node built from primitives (node potentials, evidence indicators) using products and marginalizations. Construction proceeds acyclically so that all references point to earlier (already defined) formulas. Smart constructors normalize: (i) removing $\Unit$ factors, (ii) flattening nested products, (iii) eliminating duplicate child references, (iv) collapsing marginalizations that do not reduce domain, and (v) avoiding creation of reference chains. Result: a finite DAG $\cF$ whose leaves are primitives and whose internal nodes are products or marginals, plus evidence functions.
+\paragraph{Discussion.} The compiled layer is \emph{derived} from the network plus evidence layer. Smart constructors (Section~\ref{sec:symbolic-construction}) enforce normalization-preserving simplifications: Unit elimination, duplicate factor pruning (idempotence), marginal collapse when domains coincide, and acyclic reference enforcement. A formal predicate $\mathrm{WF}$ over each syntactic category (omitted here) underpins the correctness lemmas later.
+\noindent\textbf{Product}: Evaluate children left-to-right; multiply and normalize to obtain $p$; store at id.
+
+\noindent Similar rules for marginalization ($\Sigma$), evidence, reference, unit. Node potentials are primitive unless replaced.
+
+\paragraph{Cache Invalidation.} Recursive procedure $\mathrm{clear}(i)$: if $C(i)=\bot$ stop; set $C(i):=\bot$; for each child $j$ with dependency edge $i\to j$, invoke $\mathrm{clear}(j)$. This halts since dependency graph is acyclic (smart constructors).
+
+\begin{lemma}[Locality]
+Changing $\Potf(X)$ or $\Evid(X)$ clears exactly the downward closure of its dependents; unaffected formula values remain valid.
+\end{lemma}
+\begin{proof}[Sketch]
+Edges encode structural dependence. No path from modified primitive to unaffected formula implies numeric independence. Procedure traverses precisely reachable nodes; early stop at $\bot$ prevents revisiting.
+\end{proof}
+
+\section{Joint Query Semantics}
+Event $A=\{ (X,S_X) \}$, $S_X \subseteq \Dom(X)$, probability $P(A\mid \Evidence)$ computed:
+\begin{enumerate}[label=(\alph*)]
+	\item If $A=\emptyset$: return $1$.
+	\item If $|A|=1$: evaluate node marginal and sum indicated levels.
+	\item If variables lie in a single clique $C$: evaluate $\mathrm{Post}(C)$ and aggregate over satisfying assignments.
+	\item Else if $\Evidence=\emptyset$: perform symbolic join propagation over involved cliques (introducing temporary join formula) and sum.
+	\item Else: temporarily retract evidence, compute $P(A\cup \Evidence)$ and $P(\Evidence)$, return ratio, restore evidence and cache snapshot.
+\end{enumerate}
+
+\begin{theorem}[Correctness]
+For any well-formed network, evidence $\Evidence$, and event $A$, the algorithm returns $P(A\mid \Evidence)$.
+\end{theorem}
+\begin{proof}[Sketch]
+Cases (a)--(c) follow from equivalence of symbolic posterior clique potentials to standard junction tree potentials (normalization invariance). Multi-clique case reduces to standard join over induced subgraph; evidence-bearing case applies $P(A\mid \Evidence)=P(A,\Evidence)/P(\Evidence)$. Cache restoration preserves semantics by locality.
+\end{proof}
+
+\section{Complexity}
+Let $w$ be treewidth+1, $K=\max_X |\Dom(X)|$. Symbolic build time $O(|\cC| + |\cS|)$. Evaluating a formula with domain size at most $w$ costs $O(K^w)$. Evidence updates cost proportional to number of affected formulas (at most linear in formulas referencing updated primitives). Multi-clique joint queries introduce a single additional join proportional to induced width on queried variables.
+
+\section{Extensions}
+Soft evidence: replace $\Evid(X)$ indicator with likelihood vector; semantics identical except omission of normalization until combined. Continuous nodes: treat $\theta_X$ as density; sums become integrals; unit and structural algebra unchanged. Structure learning: incremental updates mutate only changed cliques, preserving formula ids for unchanged portions to maximize cache retention.
+
+\section{Conclusion}
+We formalized a separation between symbolic structure and numerical semantics for Bayesian network inference, producing a reusable normalized formula DAG and a lazy cache-evaluated semantics with principled invalidation. This offers a foundation for further optimizations (partial evaluation, factor sharing, abstraction) while retaining exactness guarantees.
+
+\appendix
+\section{Additional Lemmas}
+\begin{lemma}[Idempotent Evidence]
+Including $\Evid(X)$ multiple times in a product leaves the resultant factor unchanged after normalization.
+\end{lemma}
+\begin{proof}
+Indicator squared equals indicator; normalization removes multiplicative constants.
+\end{proof}
+
+\begin{lemma}[Reference Elision]
+$\fref{\fref{i}} \equiv \fref{i}$ and $\fref{\Unit} \equiv \Unit$ under $\Den{\cdot}$.
+\end{lemma}
+\begin{proof}
+Immediate by definition of reference expansion and unit semantics.
+\end{proof}
+
+\begin{lemma}[Marginal-Product Commutation]
+If $\mathrm{dom}(G)\cap (\mathrm{dom}(F)\setminus S)=\emptyset$, then $\Sigma_S(F\Prod G) = (\Sigma_S F)\Prod G$ (up to normalization).
+\end{lemma}
+\begin{proof}
+Summation over variables disjoint from $G$'s domain factors through multiplication; both sides normalize to same conditional distribution.
+\end{proof}
+
+\section{Notation Summary}
+\begin{description}[leftmargin=2.2cm,labelsep=0.4cm]
+	\item[$\Potf(X)$] Node prior / conditional potential.
+	\item[$\Evid(X)$] Evidence indicator formula for $X$.
+	\item[$\Prod(\cdot)$] Normalized product of factors.
+	\item[$\Sigma_S$] Normalized marginalization onto $S$.
+	\item[$\fref{i}$] Reference to formula id $i$.
+	\item[$\Unit$] Unit (scalar) potential.
+	\item[$\Msg{C}{D}$] Message formula from clique $C$ to $D$.
+\end{description}
+
+\section*{Acknowledgements}
+This draft accompanies an implementation emphasizing separation of syntax and semantics and lazy cache evaluation.
+
+\begin{thebibliography}{9}
+\bibitem{madsen1999lazy} A. L. Madsen and F. V. Jensen. \textit{Lazy propagation: A junction tree inference algorithm based on lazy evaluation}. Artif. Intell. 1999.
+\bibitem{darwiche2003differential} A. Darwiche. \textit{A Differential Approach to Inference in Bayesian Networks}. J. ACM 2003.
+\end{thebibliography}
+
+\end{document}

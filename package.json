@@ -44,12 +44,6 @@
     "timsort": "^0.3.0",
     "ts-loader": "^9.0.0"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged",
-      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
-    }
-  },
   "config": {
     "commitizen": {
       "path": "cz-conventional-changelog"
@@ -75,7 +69,6 @@
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.1",
     "expect": "^24.8.0",
-    "husky": "^3.1.0",
     "jest": "^27.5.1",
     "lint-staged": "^10.0.0-beta.6",
     "prettier": "^1.18.2",
